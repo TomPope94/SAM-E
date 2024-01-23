@@ -1,0 +1,52 @@
+# Builder
+FROM --platform=$BUILDPLATFORM rust:1.70.0 AS builder
+ARG BUILDPLATFORM
+ARG ZIGVERSION=0.9.1
+ARG ZIGBUILDVERSION=0.10.2
+RUN apt-get update && apt-get install -y \
+    ca-certificates \
+    wget \
+    && rm -rf /var/lib/apt/lists/*
+
+# Zig
+RUN if [ "${BUILDPLATFORM#*linux/}" = "amd64" ]; then \
+    wget https://ziglang.org/download/${ZIGVERSION}/zig-linux-x86_64-${ZIGVERSION}.tar.xz && \
+    tar -xf zig-linux-x86_64-${ZIGVERSION}.tar.xz && \
+    rm -rf zig-linux-x86_64-${ZIGVERSION}.tar.xz && \
+    ln -s /zig-linux-x86_64-${ZIGVERSION}/zig /usr/bin/; \
+    else \
+    wget https://ziglang.org/download/${ZIGVERSION}/zig-linux-aarch64-${ZIGVERSION}.tar.xz && \
+    tar -xf zig-linux-aarch64-${ZIGVERSION}.tar.xz && \
+    rm -rf zig-linux-aarch64-${ZIGVERSION}.tar.xz && \
+    ln -s /zig-linux-aarch64-${ZIGVERSION}/zig /usr/bin/; \
+    fi
+
+# Cargo zigbuild
+RUN cargo install cargo-zigbuild --version ${ZIGBUILDVERSION}
+RUN rustup target add aarch64-unknown-linux-gnu
+RUN rustup target add x86_64-unknown-linux-gnu
+
+# Build
+WORKDIR /app
+COPY . .
+RUN --mount=type=cache,target=/root/.cargo \
+    --mount=type=cache,target=/app/target \
+    cargo zigbuild --release --target aarch64-unknown-linux-gnu && \
+    cargo zigbuild --release --target x86_64-unknown-linux-gnu && \
+    mkdir /app/linux && \
+    cp target/aarch64-unknown-linux-gnu/release/app /app/linux/arm64 && \
+    cp target/x86_64-unknown-linux-gnu/release/app /app/linux/amd64
+
+# Final
+FROM debian:11-slim AS runtime
+ARG TARGETPLATFORM
+
+RUN apt-get update && apt-get install -y \
+    ca-certificates \
+    wget \
+    && rm -rf /var/lib/apt/lists/*
+
+COPY --from=builder /app/${TARGETPLATFORM} /app/app
+
+ENTRYPOINT ["/app/app"]
+

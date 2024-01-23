@@ -1,0 +1,66 @@
+Transform: AWS::Serverless-2016-10-31
+Resources:
+  TestLambda1:
+    Type: AWS::Serverless::Function
+    Properties:
+      PackageType: Image
+      Architectures:
+        - x86_64      
+      ImageUri: test-lambda-1
+      Events:
+        Main:
+          Type: Api
+          Properties:
+            Path: /test-lambda-1-route
+            Method: ANY
+        MySQSEvent:
+          Type: SQS
+          Properties:
+            Queue: !GetAtt TestDeliverySQS.Arn
+            BatchSize: 10
+      Timeout: 30
+      MemorySize: 50
+  TestLambda2:
+    Type: AWS::Serverless::Function
+    Properties:
+      PackageType: Image
+      Architectures:
+        - arm64      
+      ImageUri: test-lambda-2
+      Events:
+        Main:
+          Type: Api
+          Properties:
+            Path: /test-lambda-2-route
+            Method: ANY
+        MySQSSecondEvent:
+          Type: SQS
+          Properties:
+            Queue: !GetAtt AThirdTestSQS.Arn
+            BatchSize: 8
+  AddMessage:
+    Type: AWS::Serverless::Function
+    Properties:
+      PackageType: Image
+      Architectures:
+        - arm64      
+      ImageUri: test-add-message
+      Events:
+        Main:
+          Type: Api
+          Properties:
+            Path: /add-message
+            Method: ANY
+  TestDeliverySQS:
+    Type: AWS::SQS::Queue
+    Properties:
+      QueueName: TestDeliverySQS
+  TestANewDeliverySQS:
+    Type: AWS::SQS::Queue
+    Properties:
+      QueueName: TestANewDeliverySQS
+  AThirdTestSQS:
+    Type: AWS::SQS::Queue
+    Properties:
+      QueueName: AThirdTestSQS
+
