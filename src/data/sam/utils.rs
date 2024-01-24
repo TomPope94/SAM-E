@@ -1,23 +1,27 @@
-use std::{collections::HashMap, error::Error};
-use serde_yaml::Value;
 use fancy_regex::Regex;
+use serde_yaml::Value;
+use std::collections::HashMap;
+use anyhow::{anyhow, Result};
 
 use crate::data::sam::Route;
 
-pub fn create_sam_routes(sam_template: &str) -> Result<HashMap<String, Route>, Box<dyn Error + Send + Sync>> {
+pub fn create_sam_routes(
+    sam_template: &str,
+) -> Result<HashMap<String, Route>> { 
     let sam_value: Value = serde_yaml::from_str(&sam_template).expect("invalid SAM template");
 
-    let sam_resources =
-        serde_yaml::from_value(sam_value["Resources"].to_owned());
+    let sam_resources = serde_yaml::from_value(sam_value["Resources"].to_owned());
 
     if let Ok(sam_resources) = sam_resources {
         Ok(create_sam_routes_from_resources(sam_resources))
     } else {
-        Err("no SAM Resources in template".into())
+        Err(anyhow!("no SAM Resources in template"))
     }
 }
 
-fn create_sam_routes_from_resources(sam_resources: HashMap<String, Value>) -> HashMap<String, Route> {
+fn create_sam_routes_from_resources(
+    sam_resources: HashMap<String, Value>,
+) -> HashMap<String, Route> {
     sam_resources
         .iter()
         .filter(|(_, value)| value["Type"] == "AWS::Serverless::Function")
@@ -30,7 +34,8 @@ fn create_sam_routes_from_resources(sam_resources: HashMap<String, Value>) -> Ha
                 .as_str()
                 .expect("no SAM ImageUri in template");
 
-            sam_events.iter()
+            sam_events
+                .iter()
                 .filter(|(_, event_data)| event_data["Type"] == "Api")
                 .for_each(|(_, event_data)| {
                     let sam_path = event_data["Properties"]["Path"]
@@ -47,7 +52,8 @@ fn create_sam_routes_from_resources(sam_resources: HashMap<String, Value>) -> Ha
 
                     let regex_replaced_path = replaced_regex_path(&final_path);
 
-                    let sam_route_regex = Regex::new(&regex_replaced_path).expect("invalid SAM path");
+                    let sam_route_regex =
+                        Regex::new(&regex_replaced_path).expect("invalid SAM path");
                     let sam_route = Route::create(
                         regex_replaced_path,
                         sam_method.to_owned(),
@@ -67,7 +73,8 @@ fn get_base_path(
     let sam_event_api_gateway = &event_data["Properties"]["RestApiId"];
     if sam_event_api_gateway.is_string() {
         let sam_event_api_gateway = sam_event_api_gateway.as_str().unwrap_or("");
-        let base_path_mapping = sam_resources.iter().find(|(_, sub_resource)| { sub_resource["Type"] == "AWS::ApiGateway::BasePathMapping"
+        let base_path_mapping = sam_resources.iter().find(|(_, sub_resource)| {
+            sub_resource["Type"] == "AWS::ApiGateway::BasePathMapping"
                 && sub_resource["Properties"]["RestApiId"].is_string()
                 && sub_resource["Properties"]["RestApiId"]
                     .as_str()

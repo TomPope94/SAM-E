@@ -1,6 +1,6 @@
-use std::{sync::Arc, collections::HashMap};
+use std::{collections::HashMap, sync::Arc};
 
-use aws_lambda_events::event::{ apigw::ApiGatewayV2httpRequest, sqs::SqsEvent };
+use aws_lambda_events::event::{apigw::ApiGatewayV2httpRequest, sqs::SqsEvent};
 use chrono::{DateTime, Local};
 use parking_lot::RwLock;
 use serde::{Deserialize, Serialize};
@@ -39,11 +39,7 @@ pub struct Invocation {
 }
 
 impl Invocation {
-    pub fn new(
-        event: Event,
-        event_source: EventSource,
-        sqs_queue_url: Option<String>,
-    ) -> Self {
+    pub fn new(event: Event, event_source: EventSource, sqs_queue_url: Option<String>) -> Self {
         Self {
             uuid: Uuid::new_v4(),
             date_time: Local::now(),

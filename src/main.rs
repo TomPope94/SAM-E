@@ -2,11 +2,15 @@ pub mod data;
 
 use std::env;
 
-use axum::{response::Html, routing::get, Router};
-use tracing::{info, debug};
+use axum::{
+    response::Html,
+    routing::{get, post},
+    Router,
+};
+use tracing::{debug, info};
 use tracing_subscriber::EnvFilter;
 
-use data::{store, sam::utils};
+use data::api::ApiState;
 
 #[tokio::main]
 async fn main() {
@@ -21,17 +25,23 @@ async fn main() {
     let sam_template = env::var("SAM_TEMPLATE").expect("No SAM template found");
     debug!("SAM template: {:?}", sam_template);
 
-    let sam_routes = utils::create_sam_routes(&sam_template);
-
-    let store = store::Store::new();
+    let api_state = ApiState::new(&sam_template);
 
     info!("Setting up invocation endpoints for Lambda runtime API");
 
-    // build our application with a route
-    let app = Router::new().route("/", get(handler));
+    let invocation_routes = Router::new()
+        .route("/next", get(handler))
+        .route("/:request_id/response", post(|| async { "OK" }))
+        .route("/:request_id/error", post(|| async { "OK" }));
 
-    // run it
-    let listener = tokio::net::TcpListener::bind("127.0.0.1:3000")
+    // build our application with a route
+    let app = Router::new()
+        .nest("/2018-06-01/runtime/invocation", invocation_routes)
+        .route("/2018-06-01/runtime/init/error", post(|| async { "OK" }))
+        .route("/*path", get(|| async { "OK" }))
+        .with_state(api_state);
+
+    let listener = tokio::net::TcpListener::bind("0.0.0.0:3000")
         .await
         .unwrap();
     info!("listening on {}", listener.local_addr().unwrap());
