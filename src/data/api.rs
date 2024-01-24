@@ -1,11 +1,11 @@
-use std::collections::HashMap;
-use super::{store::Store, sam::Route};
+use super::{sam::Route, store::Store};
 use crate::data::sam::utils::create_sam_routes;
+use std::collections::HashMap;
 use tracing::{debug, info};
 
 #[derive(Debug, Clone)]
 pub struct ApiState {
-    pub sam_routes: Option<HashMap<String, Route>>, 
+    pub sam_routes: Option<HashMap<String, Route>>,
     pub invocation_store: Store,
 }
 

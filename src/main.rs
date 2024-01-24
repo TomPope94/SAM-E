@@ -1,4 +1,5 @@
 pub mod data;
+pub mod handlers;
 
 use std::env;
 
@@ -11,6 +12,7 @@ use tracing::{debug, info};
 use tracing_subscriber::EnvFilter;
 
 use data::api::ApiState;
+use handlers::client::request::request_handler;
 
 #[tokio::main]
 async fn main() {
@@ -38,12 +40,17 @@ async fn main() {
     let app = Router::new()
         .nest("/2018-06-01/runtime/invocation", invocation_routes)
         .route("/2018-06-01/runtime/init/error", post(|| async { "OK" }))
-        .route("/*path", get(|| async { "OK" }))
+        .route(
+            "/*path",
+            get(request_handler)
+                .post(request_handler)
+                .put(request_handler)
+                .delete(request_handler)
+                .patch(request_handler),
+        )
         .with_state(api_state);
 
-    let listener = tokio::net::TcpListener::bind("0.0.0.0:3000")
-        .await
-        .unwrap();
+    let listener = tokio::net::TcpListener::bind("0.0.0.0:3000").await.unwrap();
     info!("listening on {}", listener.local_addr().unwrap());
     axum::serve(listener, app).await.unwrap();
 }

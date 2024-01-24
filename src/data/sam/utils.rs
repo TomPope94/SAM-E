@@ -1,13 +1,11 @@
+use anyhow::{anyhow, Result};
 use fancy_regex::Regex;
 use serde_yaml::Value;
 use std::collections::HashMap;
-use anyhow::{anyhow, Result};
 
 use crate::data::sam::Route;
 
-pub fn create_sam_routes(
-    sam_template: &str,
-) -> Result<HashMap<String, Route>> { 
+pub fn create_sam_routes(sam_template: &str) -> Result<HashMap<String, Route>> {
     let sam_value: Value = serde_yaml::from_str(&sam_template).expect("invalid SAM template");
 
     let sam_resources = serde_yaml::from_value(sam_value["Resources"].to_owned());
