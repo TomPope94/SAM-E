@@ -5,8 +5,8 @@ use tracing::{debug, info};
 
 #[derive(Debug, Clone)]
 pub struct ApiState {
-    pub sam_routes: Option<HashMap<String, Route>>,
-    pub invocation_store: Store,
+    sam_routes: Option<HashMap<String, Route>>,
+    invocation_store: Store,
 }
 
 impl ApiState {
@@ -27,5 +27,17 @@ impl ApiState {
                 invocation_store: Store::new(),
             }
         }
+    }
+
+    pub fn get_routes_vec(&self) -> Option<Vec<Route>> {
+        if let Some(routes) = &self.sam_routes {
+            Some(routes.values().cloned().collect())
+        } else {
+            None
+        }
+    }
+
+    pub fn get_store(&self) -> &Store {
+        &self.invocation_store
     }
 }
