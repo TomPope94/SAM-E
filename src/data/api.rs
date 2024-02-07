@@ -5,8 +5,8 @@ use tracing::{debug, info};
 
 #[derive(Debug, Clone)]
 pub struct ApiState {
-    sam_routes: Option<HashMap<String, Route>>,
-    invocation_store: Store,
+    pub sam_routes: Option<HashMap<String, Route>>,
+    pub invocation_store: Store,
 }
 
 impl ApiState {

@@ -1,18 +1,21 @@
 pub mod data;
 pub mod handlers;
+pub mod middleware;
 
 use std::env;
 
 use axum::{
-    response::Html,
     routing::{get, post},
     Router,
 };
-use tracing::{debug, info};
+use tracing::{info, trace};
 use tracing_subscriber::EnvFilter;
 
 use data::api::ApiState;
-use handlers::client::request::request_handler;
+use handlers::{
+    client::request,
+    invocation::{init_error, invocation_error, next, response},
+};
 
 #[tokio::main]
 async fn main() {
@@ -25,36 +28,47 @@ async fn main() {
 
     info!("Now parsing the SAM template");
     let sam_template = env::var("SAM_TEMPLATE").expect("No SAM template found");
-    debug!("SAM template: {:?}", sam_template);
+    trace!("SAM template: {:?}", sam_template);
 
     let api_state = ApiState::new(&sam_template);
 
     info!("Setting up invocation endpoints for Lambda runtime API");
 
     let invocation_routes = Router::new()
-        .route("/next", get(handler))
-        .route("/:request_id/response", post(|| async { "OK" }))
-        .route("/:request_id/error", post(|| async { "OK" }));
+        .route("/next", get(next::request_handler))
+        .route("/:request_id/response", post(response::response_handler))
+        .route(
+            "/:request_id/error",
+            post(invocation_error::response_handler),
+        )
+        .route_layer(axum::middleware::from_fn(middleware::headers_mw));
 
     // build our application with a route
     let app = Router::new()
-        .nest("/2018-06-01/runtime/invocation", invocation_routes)
-        .route("/2018-06-01/runtime/init/error", post(|| async { "OK" }))
-        .route(
-            "/*path",
-            get(request_handler)
-                .post(request_handler)
-                .put(request_handler)
-                .delete(request_handler)
-                .patch(request_handler),
+        .nest(
+            "/:container_name/2018-06-01/runtime/invocation",
+            invocation_routes,
         )
+        .route(
+            "/:container_name/2018-06-01/runtime/init/error",
+            post(init_error::response_handler),
+        )
+        .route(
+            "/2018-06-01/runtime/invocation/:request_id/response",
+            post(response::response_handler),
+        )
+        .route(
+            "/custom/*path",
+            get(request::request_handler)
+                .post(request::request_handler)
+                .put(request::request_handler)
+                .delete(request::request_handler)
+                .patch(request::request_handler),
+        )
+        .layer(middleware::cors_layer())
         .with_state(api_state);
 
-    let listener = tokio::net::TcpListener::bind("0.0.0.0:3000").await.unwrap();
+    let listener = tokio::net::TcpListener::bind("0.0.0.0:3030").await.unwrap();
     info!("listening on {}", listener.local_addr().unwrap());
     axum::serve(listener, app).await.unwrap();
-}
-
-async fn handler() -> Html<&'static str> {
-    Html("<h1>Hello, World!</h1>")
 }

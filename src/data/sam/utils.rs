@@ -42,7 +42,13 @@ fn create_sam_routes_from_resources(
 
                     let base_path = get_base_path(event_data, &sam_resources);
 
-                    let final_path = trim_path_ending_slash(format!("{}{}", base_path, sam_path));
+                    let final_path = trim_path_ending_slash(format!("{}{}", &base_path, sam_path));
+
+                    // TODO this should be handled in the get_base_path function
+                    let mut base_path_option = None;
+                    if base_path.len() > 0 {
+                        base_path_option = Some(base_path.to_owned());
+                    }
 
                     let sam_method = event_data["Properties"]["Method"]
                         .as_str()
@@ -57,6 +63,7 @@ fn create_sam_routes_from_resources(
                         sam_method.to_owned(),
                         sam_container_name.to_owned(),
                         sam_route_regex,
+                        base_path_option,
                     );
                     acc.insert(format!("{}::{}", final_path, sam_method), sam_route);
                 });

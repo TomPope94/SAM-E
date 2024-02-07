@@ -6,6 +6,7 @@ pub struct Route {
     pub method: String,
     pub container_name: String,
     pub route_regex: Regex,
+    pub route_base_path: Option<String>,
 }
 
 impl Route {
@@ -14,12 +15,14 @@ impl Route {
         method: String,
         container_name: String,
         route_regex: Regex,
+        route_base_path: Option<String>,
     ) -> Self {
         Route {
             route,
             method,
             container_name,
             route_regex,
+            route_base_path,
         }
     }
 }
