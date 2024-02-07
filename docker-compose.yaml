@@ -7,7 +7,7 @@ services:
       context: .
       dockerfile: Dockerfile
     environment:
-      - RUST_LOG=aws_smithy_http=debug,aws_config=debug,aws_sigv4=debug,app=debug
+      - RUST_LOG=aws_smithy_http=debug,aws_config=debug,aws_sigv4=debug,app=trace
       - SAM_TEMPLATE=$SAM_TEMPLATE
     networks:
       - development

@@ -1,8 +1,9 @@
-use crate::data::store::{InvocationQueue, ResponseType, Status};
+use crate::data::store::{EventSource, InvocationQueue, ResponseType, Status};
 
 use aws_lambda_events::apigw::ApiGatewayProxyResponse;
 use axum::{
-    extract::{rejection::JsonRejection, Json, Path, State},
+    body::Bytes,
+    extract::{Path, State},
     http::{HeaderMap, StatusCode},
     response::IntoResponse,
 };
@@ -16,7 +17,7 @@ pub async fn response_handler(
     headers: HeaderMap,
     Path((container_name, request_id)): Path<(String, Uuid)>,
     State(api_state): State<ApiState>,
-    body: Result<Json<ApiGatewayProxyResponse>, JsonRejection>,
+    body: Bytes,
 ) -> impl IntoResponse {
     info!(
         "Response detected from lambda runtime for container: {}",
@@ -53,12 +54,13 @@ pub async fn response_handler(
 
             invocation.set_response_headers(headers_hashmap);
             invocation.set_status(Status::Processed);
-            match body {
-                Ok(body) => {
-                    info!("Body was parsed successfully");
-                    invocation.set_response(ResponseType::Api(body.0));
+
+            match invocation.get_event_source() {
+                EventSource::Api => {
+                    let response_data: ApiGatewayProxyResponse =
+                        serde_json::from_slice(&body).unwrap();
+                    invocation.set_response(ResponseType::Api(response_data));
                 }
-                Err(e) => error!("Error parsing body: {:?}", e),
             }
 
             trace!("New invocation... {:?}", invocation);
@@ -66,7 +68,7 @@ pub async fn response_handler(
             return StatusCode::OK;
         }
         None => {
-            debug!("No invocation found to complete processing");
+            error!("No invocation found to complete processing");
             return StatusCode::INTERNAL_SERVER_ERROR;
         }
     }

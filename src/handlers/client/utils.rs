@@ -6,8 +6,7 @@ use crate::data::{
 };
 
 use aws_lambda_events::apigw::{
-    ApiGatewayProxyRequest, ApiGatewayProxyRequestContext, 
-    ApiGatewayRequestIdentity,
+    ApiGatewayProxyRequest, ApiGatewayProxyRequestContext, ApiGatewayRequestIdentity,
 };
 use axum::{
     extract::Json,

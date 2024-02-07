@@ -85,6 +85,10 @@ impl Invocation {
         self.status = status;
     }
 
+    pub fn get_event_source(&self) -> &EventSource {
+        &self.event_source
+    }
+
     pub fn get_status(&self) -> &Status {
         &self.status
     }
