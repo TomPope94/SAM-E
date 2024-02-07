@@ -12,7 +12,7 @@ services:
     networks:
       - development
     ports:
-      - 3030:3030
+      - 3000:3000
     mem_limit: 250m
     volumes:
       - /home/ubuntu/.aws/credentials:/root/.aws/credentials:ro
@@ -24,7 +24,7 @@ services:
       context: ./test-lambda-node
     environment:
       # Containers process requests based on the {api-gateway-url}/{container-name}
-      - AWS_LAMBDA_RUNTIME_API=http://local-aws:3030/test-lambda-node
+      - AWS_LAMBDA_RUNTIME_API=http://local-aws:3000/test-lambda-node
     depends_on:
       - local-aws
     deploy:
@@ -42,7 +42,7 @@ services:
       # - RUST_LOG=aws_smithy_http=trace,aws_config=trace,aws_sigv4=trace,app=trace,lambda_runtime=trace
       - RUST_LOG=trace
       # - RUST_BACKTRACE=1
-      - AWS_LAMBDA_RUNTIME_API=http://local-aws:3030/test-axum
+      - AWS_LAMBDA_RUNTIME_API=http://local-aws:3000/test-axum
       - AWS_LAMBDA_FUNCTION_NAME=TestAxum
       - AWS_LAMBDA_FUNCTION_MEMORY_SIZE=50
       - AWS_LAMBDA_FUNCTION_VERSION=1
@@ -63,7 +63,7 @@ services:
       dockerfile: Dockerfile
     environment:
       - RUST_LOG=aws_smithy_http=trace,aws_config=trace,aws_sigv4=trace,app=trace
-      - AWS_LAMBDA_RUNTIME_API=http://local-aws:3030/test-rust
+      - AWS_LAMBDA_RUNTIME_API=http://local-aws:3000/test-rust
       - AWS_LAMBDA_FUNCTION_NAME=TestRust
       - AWS_LAMBDA_FUNCTION_MEMORY_SIZE=50
       - AWS_LAMBDA_FUNCTION_VERSION=1
