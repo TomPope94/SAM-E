@@ -1,4 +1,4 @@
-use crate::data::store::{InvocationQueue, Status};
+use crate::data::store::{InvocationQueue, ResponseType, Status};
 
 use aws_lambda_events::apigw::ApiGatewayProxyResponse;
 use axum::{
@@ -7,7 +7,7 @@ use axum::{
     response::IntoResponse,
 };
 use std::str;
-use tracing::{debug, error, info};
+use tracing::{debug, error, info, trace};
 use uuid::Uuid;
 
 use crate::data::api::ApiState;
@@ -42,7 +42,7 @@ pub async fn response_handler(
     match store_queues
         .entry(write_container_name)
         .or_insert(write_queue)
-        .api_invocations
+        .get_invocations_mut()
         .iter_mut()
         .find(|invocation| invocation.get_request_id() == &request_id)
     {
@@ -56,12 +56,12 @@ pub async fn response_handler(
             match body {
                 Ok(body) => {
                     info!("Body was parsed successfully");
-                    invocation.set_response_body(body.0);
+                    invocation.set_response(ResponseType::Api(body.0));
                 }
                 Err(e) => error!("Error parsing body: {:?}", e),
             }
 
-            debug!("New invocation... {:?}", invocation);
+            trace!("New invocation... {:?}", invocation);
 
             return StatusCode::OK;
         }

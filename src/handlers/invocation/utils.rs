@@ -1,5 +1,4 @@
 use crate::data::store::{Invocation, InvocationQueue, Status, Store};
-use aws_lambda_events::apigw::{ApiGatewayProxyRequest, ApiGatewayProxyResponse};
 use tracing::{debug, trace};
 use uuid::Uuid;
 
@@ -9,11 +8,11 @@ pub async fn find_invocation_and_process<'a>(
     status_to_find: Option<Status>,
     invocation_id: Option<Uuid>,
     new_status: Option<Status>,
-) -> Option<Invocation<ApiGatewayProxyRequest, ApiGatewayProxyResponse>> {
+) -> Option<Invocation> {
     let mut container_queue = get_container_queue(&store, container_name);
 
     let invocation = container_queue
-        .api_invocations
+        .get_invocations_mut()
         .iter_mut()
         .find(|invocation| {
             if let (Some(status_to_find), Some(invocation_id)) = (status_to_find, invocation_id) {

@@ -1,6 +1,6 @@
 use crate::data::{
     api::ApiState,
-    store::{EventSource, InvocationQueue, Status},
+    store::{InvocationQueue, RequestType, Status},
 };
 
 use aws_lambda_events::apigw::ApiGatewayProxyRequest;
@@ -33,7 +33,7 @@ pub async fn request_handler(
 
             if result
                 .unwrap_or(&read_queue)
-                .api_invocations
+                .get_invocations()
                 .clone()
                 .into_iter()
                 .any(|invocation| invocation.get_status() == &Status::Pending)
@@ -63,7 +63,7 @@ pub async fn request_handler(
         .write()
         .entry(write_container_name)
         .or_insert(write_queue)
-        .api_invocations
+        .get_invocations_mut()
         .iter_mut()
         .find(|invocation| invocation.get_status() == &Status::Pending)
     {
@@ -80,12 +80,14 @@ pub async fn request_handler(
     // Return the response
     if invocation.is_ok() && invocation_to_process.is_some() {
         let invocation_data = invocation_to_process.unwrap();
-        match invocation_data.get_event_source() {
-            EventSource::Api => {
-                debug!("Detected invocation source as API Gateway");
-                let dt = chrono::Local::now() + chrono::Duration::days(1);
+        let dt = chrono::Local::now() + chrono::Duration::days(1);
 
-                debug!("Event being sent: {:#?}", invocation_data.get_event());
+        let event_request = invocation_data.get_request();
+
+        match event_request {
+            RequestType::Api(api_request) => {
+                debug!("Detected invocation source as API Gateway");
+                debug!("Event being sent: {:#?}", api_request);
                 return (
                     StatusCode::OK,
                     [
@@ -95,10 +97,10 @@ pub async fn request_handler(
                         ),
                         ("lambda-runtime-deadline-ms", dt.timestamp().to_string()),
                     ],
-                    Json(invocation_data.get_event().to_owned()),
+                    Json(api_request.to_owned()),
                 );
             }
-            EventSource::Sqs => {
+            RequestType::Sqs(_sqs_request) => {
                 debug!("Processing an SQS invocation");
                 return (
                     StatusCode::OK,

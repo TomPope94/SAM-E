@@ -5,12 +5,12 @@ use tracing::info;
 async fn handler(event: Request) -> Result<impl IntoResponse, Error> {
     let resp: lambda_http::Response<String> = Response::builder()
         .status(200)
-        // .header("content-type", "application/json")
-        .header("content-type", "text/html")
-        .body("Hello AWS Lambda HTTP request".into())
-        // .body(serde_json::json!({
-        //     "message": "Hello AWS Lambda HTTP request",
-        // }).to_string().into())
+        .header("content-type", "application/json")
+        // .header("content-type", "text/html")
+        // .body("Hello AWS Lambda HTTP request".into())
+        .body(serde_json::json!({
+            "message": "Hello AWS Lambda HTTP request",
+        }).to_string().into())
         .map_err(Box::new)?;
 
     info!("Response: {:#?}", resp);

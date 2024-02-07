@@ -6,7 +6,7 @@ use axum::{
     response::IntoResponse,
 };
 use tower_http::cors::{Any, CorsLayer};
-use tracing::info;
+use tracing::trace;
 
 pub fn cors_layer() -> CorsLayer {
     CorsLayer::new()
@@ -18,13 +18,13 @@ pub fn cors_layer() -> CorsLayer {
 // Adds headers to the request if they're in body and not in request itself - Something that
 // happens with the Rust Lambda runtime
 pub async fn headers_mw(req: Request<Body>, next: Next) -> impl IntoResponse {
-    info!("Request = {:#?}", req);
+    trace!("Request = {:#?}", req);
 
     let (mut parts, body) = req.into_parts();
     let body_bytes = body_to_bytes("middleware request", body).await.unwrap();
 
     if let Ok(body_value) = serde_json::from_slice::<ApiGatewayProxyResponse>(&body_bytes) {
-        info!("Body value: {:#?}", body_value);
+        trace!("Body value: {:#?}", body_value);
 
         let headers = body_value.headers;
         headers.iter().for_each(|(key, value)| {
@@ -35,7 +35,7 @@ pub async fn headers_mw(req: Request<Body>, next: Next) -> impl IntoResponse {
         });
     }
 
-    info!("Parts = {:#?}", parts);
+    trace!("Parts = {:#?}", parts);
     let req = Request::from_parts(parts, Body::from(body_bytes));
 
     next.run(req).await

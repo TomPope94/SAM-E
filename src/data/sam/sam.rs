@@ -25,4 +25,24 @@ impl Route {
             route_base_path,
         }
     }
+
+    pub fn get_route(&self) -> &str {
+        &self.route
+    }
+
+    pub fn get_method(&self) -> &str {
+        &self.method
+    }
+
+    pub fn get_container_name(&self) -> &str {
+        &self.container_name
+    }
+
+    pub fn get_route_regex(&self) -> &Regex {
+        &self.route_regex
+    }
+
+    pub fn get_route_base_path(&self) -> Option<&str> {
+        self.route_base_path.as_deref()
+    }
 }
