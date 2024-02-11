@@ -1,8 +1,7 @@
 version: '3.9'
 services:
-  local-aws:
+  sammy:
     init: true
-    # image: local-aws
     build:
       context: .
       dockerfile: Dockerfile
@@ -24,9 +23,9 @@ services:
       context: ./test-lambda-node
     environment:
       # Containers process requests based on the {api-gateway-url}/{container-name}
-      - AWS_LAMBDA_RUNTIME_API=http://local-aws:3000/test-lambda-node
+      - AWS_LAMBDA_RUNTIME_API=http://sammy:3000/test-lambda-node
     depends_on:
-      - local-aws
+      - sammy
     deploy:
       replicas: 1
     networks:
@@ -42,14 +41,14 @@ services:
       # - RUST_LOG=aws_smithy_http=trace,aws_config=trace,aws_sigv4=trace,app=trace,lambda_runtime=trace
       - RUST_LOG=trace
       # - RUST_BACKTRACE=1
-      - AWS_LAMBDA_RUNTIME_API=http://local-aws:3000/test-axum
+      - AWS_LAMBDA_RUNTIME_API=http://sammy:3000/test-axum
       - AWS_LAMBDA_FUNCTION_NAME=TestAxum
       - AWS_LAMBDA_FUNCTION_MEMORY_SIZE=50
       - AWS_LAMBDA_FUNCTION_VERSION=1
       - AWS_LAMBDA_LOG_STREAM_NAME=TestAxum
       - AWS_LAMBDA_LOG_GROUP_NAME=aws/lambda/TestAxum
     depends_on:
-      - local-aws
+      - sammy
     deploy:
       replicas: 1
     networks:
@@ -63,14 +62,14 @@ services:
       dockerfile: Dockerfile
     environment:
       - RUST_LOG=aws_smithy_http=trace,aws_config=trace,aws_sigv4=trace,app=trace
-      - AWS_LAMBDA_RUNTIME_API=http://local-aws:3000/test-rust
+      - AWS_LAMBDA_RUNTIME_API=http://sammy:3000/test-rust
       - AWS_LAMBDA_FUNCTION_NAME=TestRust
       - AWS_LAMBDA_FUNCTION_MEMORY_SIZE=50
       - AWS_LAMBDA_FUNCTION_VERSION=1
       - AWS_LAMBDA_LOG_STREAM_NAME=TestRust
       - AWS_LAMBDA_LOG_GROUP_NAME=aws/lambda/TestRust
     depends_on:
-      - local-aws
+      - sammy
     deploy:
       replicas: 1
     networks:

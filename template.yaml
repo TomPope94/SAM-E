@@ -25,7 +25,7 @@ Resources:
         - x86_64      
       ImageUri: test-axum
       Events:
-        Main:
+        Index:
           Type: Api
           Properties:
             RestApiId: !Ref TestApiGateway
@@ -44,6 +44,11 @@ Resources:
             BatchSize: 10
       Timeout: 30
       MemorySize: 50
+      Environment:
+        Variables:
+          TEST_VAR: testing
+          TEST_SECOND: !Ref Domain
+
   TestRust:
     Type: AWS::Serverless::Function
     Properties:
