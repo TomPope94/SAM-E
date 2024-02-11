@@ -7,11 +7,9 @@ networks:
 services:
   sam-e-invoker:
     init: true
-    build:
-      context: ~/Work/sam-e # TODO: obviously this is wrong and should come from dockerhub
-      dockerfile: Dockerfile.release
+    image: tompope94/sam-e-invoker
     environment:
-      - RUST_LOG=aws_smithy_http=debug,aws_config=debug,aws_sigv4=debug,app=trace
+      - RUST_LOG=aws_smithy_http=debug,aws_config=debug,aws_sigv4=debug,app=info
       - CONFIG=$CONFIG
     networks:
       - development
