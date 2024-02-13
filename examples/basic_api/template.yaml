@@ -1,4 +1,11 @@
 Transform: AWS::Serverless-2016-10-31
+
+Parameters:
+  EnvironmentName:
+    Description: The environment name is determined by the current branch you are deploying from.
+    Type: String
+    Default: staging
+
 Resources:
   TestApiGateway:
     Type: AWS::Serverless::Api
@@ -75,11 +82,19 @@ Resources:
           Properties:
             Path: /test-lambda-node-route
             Method: ANY
-        # MySQSSecondEvent:
-        #   Type: SQS
-        #   Properties:
-        #     Queue: !GetAtt AThirdTestSQS.Arn
-        #     BatchSize: 8
+  # TestQueueTriggerNode:
+  #   Type: AWS::Serverless::Function
+  #   Properties:
+  #     PackageType: Image
+  #     Architectures:
+  #       - arm64
+  #     ImageUri: test-queue-trigger-node
+  #     Events:
+  #       Main:
+  #         Type: SQS
+  #         Properties:
+  #           Queue: !GetAtt TestDeliverySQS.Arn
+  #           BatchSize: 8
   # AddMessage:
   #   Type: AWS::Serverless::Function
   #   Properties:
@@ -93,16 +108,42 @@ Resources:
   #         Properties:
   #           Path: /add-message
   #           Method: ANY
-  # TestDeliverySQS:
-  #   Type: AWS::SQS::Queue
-  #   Properties:
-  #     QueueName: TestDeliverySQS
-  # TestANewDeliverySQS:
-  #   Type: AWS::SQS::Queue
-  #   Properties:
-  #     QueueName: TestANewDeliverySQS
-  # AThirdTestSQS:
-  #   Type: AWS::SQS::Queue
-  #   Properties:
-  #     QueueName: AThirdTestSQS
+  TestDeliverySQS:
+    Type: AWS::SQS::Queue
+    Properties:
+      QueueName: TestDeliverySQS
 
+  TestANewDeliverySQS:
+    Type: AWS::SQS::Queue
+    Properties:
+      QueueName: TestANewDeliverySQS
+
+  DBInstance:
+    Type: AWS::RDS::DBInstance
+    Properties:
+      Engine: aurora-postgresql
+      DBInstanceClass: db.serverless
+      DBClusterIdentifier: !Ref DBCluster
+
+  HardcodedNameBucket:
+    Type: "AWS::S3::Bucket"
+    Properties:
+      BucketName: test-bucket-001
+      AccessControl: Private
+      PublicAccessBlockConfiguration:
+        BlockPublicAcls: true
+        IgnorePublicAcls: true
+        BlockPublicPolicy: true
+        RestrictPublicBuckets: true
+
+  DynamicNameBucket:
+    Type: "AWS::S3::Bucket"
+    Properties:
+      # BucketName: !Sub "${EnvironmentName}-test-bucket"
+      BucketName: todo-dynamic-name-bucket
+      AccessControl: Private
+      PublicAccessBlockConfiguration:
+        BlockPublicAcls: true
+        IgnorePublicAcls: true
+        BlockPublicPolicy: true
+        RestrictPublicBuckets: true

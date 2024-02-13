@@ -32,13 +32,14 @@ pub async fn start() -> anyhow::Result<()> {
     let config_string = serde_yaml::to_string(&config)?;
 
     let mut sh = Command::new("sh");
-
     
-    let docker_cmd = format!("docker compose --compatibility -f {} up --remove-orphans --build", &docker_compose_location);
+    // let docker_cmd = format!("docker compose --compatibility -f {} up --remove-orphans --build", &docker_compose_location);
+    let docker_cmd = "docker compose --compatibility up --remove-orphans --build";
 
     sh.arg("-c")
         // .arg(config_arg)
         .env("CONFIG", config_string)
+        .current_dir(sam_e_directory_path)
         .arg(docker_cmd)
         .status()?;
 

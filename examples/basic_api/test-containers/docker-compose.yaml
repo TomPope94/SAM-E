@@ -1,21 +1,5 @@
 version: '3.9'
 services:
-  sammy:
-    init: true
-    build:
-      context: .
-      dockerfile: Dockerfile
-    environment:
-      - RUST_LOG=aws_smithy_http=debug,aws_config=debug,aws_sigv4=debug,app=trace
-      - SAM_TEMPLATE=$SAM_TEMPLATE
-    networks:
-      - development
-    ports:
-      - 3000:3000
-    mem_limit: 250m
-    volumes:
-      - /home/ubuntu/.aws/credentials:/root/.aws/credentials:ro
-
   test-lambda-node:
     init: true
     image: test-lambda-node
@@ -24,8 +8,6 @@ services:
     environment:
       # Containers process requests based on the {api-gateway-url}/{container-name}
       - AWS_LAMBDA_RUNTIME_API=http://sammy:3000/test-lambda-node
-    depends_on:
-      - sammy
     deploy:
       replicas: 1
     networks:
@@ -47,8 +29,6 @@ services:
       - AWS_LAMBDA_FUNCTION_VERSION=1
       - AWS_LAMBDA_LOG_STREAM_NAME=TestAxum
       - AWS_LAMBDA_LOG_GROUP_NAME=aws/lambda/TestAxum
-    depends_on:
-      - sammy
     deploy:
       replicas: 1
     networks:
@@ -68,8 +48,6 @@ services:
       - AWS_LAMBDA_FUNCTION_VERSION=1
       - AWS_LAMBDA_LOG_STREAM_NAME=TestRust
       - AWS_LAMBDA_LOG_GROUP_NAME=aws/lambda/TestRust
-    depends_on:
-      - sammy
     deploy:
       replicas: 1
     networks:

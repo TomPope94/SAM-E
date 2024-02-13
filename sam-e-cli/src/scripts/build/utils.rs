@@ -1,4 +1,4 @@
-use sam_e_types::config::{Event, EventType, Lambda};
+use sam_e_types::config::{Event, EventType, Lambda, Infrastructure, InfrastructureType};
 use anyhow::Error;
 use serde_yaml::Value;
 use std::{
@@ -6,8 +6,11 @@ use std::{
     fs,
     path::{Path, PathBuf},
 };
-use tracing::{debug, trace, warn};
+use tracing::{debug, error, trace, warn};
 
+/// Gets the raw CloudFormation template file from directory and returns resources specified as
+/// hashmap. If multi set to true, will return all files found collated (i.e. all resources across
+/// all the files).
 pub fn collect_template_to_resource(
     template_name: &str,
     multi: &bool,
@@ -43,6 +46,8 @@ pub fn collect_template_to_resource(
     resources
 }
 
+/// Takes a hashmap of the resources within CloudFormation template and returns each of the Lambdas
+/// specified in a vector.
 pub fn get_lambdas_from_resources(resources: &HashMap<String, serde_yaml::Value>) -> Vec<Lambda> {
     let mut lambdas = vec![];
 
@@ -129,6 +134,52 @@ pub fn get_lambdas_from_resources(resources: &HashMap<String, serde_yaml::Value>
     lambdas
 }
 
+pub fn get_infrastructure_from_resources(resources: &HashMap<String, serde_yaml::Value>) -> Vec<Infrastructure> {
+    let mut infrastructure = vec![];
+
+    for (resource_name, resource) in resources.iter() {
+        trace!("Resource name: {}", resource_name);
+        if let Some(resource_type) = resource.get("Type") {
+            if resource_type == "AWS::RDS::DBInstance" {
+                trace!("Found a DB instance!");
+                trace!("Now working out engine type...");
+
+                if let Some(engine) = resource["Properties"].get("Engine") {
+                    if engine.as_str().unwrap().contains("postgresql") {
+                        trace!("Database engine recognized as Postgres");
+                        infrastructure.push(Infrastructure::new(resource_name.to_string(), InfrastructureType::Postgres));
+                    }
+
+                    if engine.as_str().unwrap().contains("mysql") {
+                        trace!("Database engine recognized as MySQL");
+                        infrastructure.push(Infrastructure::new(resource_name.to_string(), InfrastructureType::Mysql));
+                    }
+                } else {
+                    error!("No engine type found for DB instance: {}", resource_name);
+                }
+            }
+
+            if resource_type == "AWS::SQS::Queue" {
+                trace!("Found a queue!");
+                infrastructure.push(Infrastructure::new(resource_name.to_string(), InfrastructureType::Sqs));
+            }
+
+            if resource_type == "AWS::S3::Bucket" {
+                trace!("Found a bucket!");
+
+                if let Some(bucket_name) = resource["Properties"].get("BucketName") {
+                    infrastructure.push(Infrastructure::new(bucket_name.as_str().unwrap().to_string(), InfrastructureType::S3));
+                } else {
+                    error!("No bucket name provided for S3 bucket: {}", resource_name);
+                }
+            }
+        }
+    }
+
+    infrastructure
+}
+
+/// If a Lambda is linked to an API gateway with a base path, this will be returned as an Option.
 fn get_base_path(
     api_id: &str,
     sam_resources: &HashMap<String, serde_yaml::Value>,
@@ -154,11 +205,9 @@ fn get_base_path(
     }
 }
 
-// pub fn build_resources(resources: HashMap<String, Value>) -> anyhow::Result<()> {
-//     debug!("Resources: {:#?}", resources);
-//     Ok(())
-// }
-
+/// Builds the template for an individual CloudFormation template returning a hashmap of just
+/// the resources section. Starts by reading the file to a string before passing to serde_yaml to
+/// be parsed into the HashMap. 
 fn build_template(template: &PathBuf) -> anyhow::Result<HashMap<String, Value>> {
     debug!("Building template: {:?}", template);
 

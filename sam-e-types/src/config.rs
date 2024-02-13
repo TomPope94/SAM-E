@@ -34,6 +34,10 @@ impl Config {
     pub fn get_infrastructure(&self) -> &Vec<Infrastructure> {
         &self.infrastructure
     }
+
+    pub fn set_infrastructure(&mut self, infrastructure: Vec<Infrastructure>) {
+        self.infrastructure = infrastructure;
+    }
 }
 
 /// Configuration for the local runtime
@@ -58,6 +62,32 @@ impl Runtime {
 #[derive(Debug, Deserialize, Serialize, Clone)]
 pub struct Infrastructure {
     name: String,
+    infrastructure_type: InfrastructureType,
+}
+
+impl Infrastructure {
+    pub fn new(name: String, infrastructure_type: InfrastructureType) -> Self {
+        Self {
+            name,
+            infrastructure_type,
+        }
+    }
+
+    pub fn get_name(&self) -> &str {
+        &self.name
+    }
+
+    pub fn get_infrastructure_type(&self) -> &InfrastructureType {
+        &self.infrastructure_type
+    }
+}
+
+#[derive(Debug, Deserialize, Serialize, Clone, Eq, PartialEq)]
+pub enum InfrastructureType {
+    Sqs,
+    Postgres,
+    Mysql,
+    S3
 }
 
 /// The types of events that can trigger a Lambda

@@ -4,7 +4,29 @@ networks:
   development:
     attachable: true
 
+volumes:
+{%- set postgres_volume = false %}
+{%- set mysql_volume = false %}
+{%- set sqs_volume = false %}
+{%- set s3_volume = false %}
+{%- for infra in infrastructure %}
+{%- if infra.infrastructure_type == "Mysql" and not mysql_volume -%}
+  {%- set_global mysql_volume = true %}
+  mysql-local: {}
+{%- elif infra.infrastructure_type == "Postgres" and not postgres_volume -%}
+  {%- set_global postgres_volume = true %}
+  postgres-local: {}
+{%- elif infra.infrastructure_type == "Sqs" and not sqs_volume -%}
+  {%- set_global sqs_volume = true %}
+  sqs-local: {}
+{%- elif infra.infrastructure_type == "S3" and not s3_volume -%}
+  {%- set_global s3_volume = true %}
+  s3-local: {}
+{%- endif %}
+{%- endfor %}
+
 services:
+  # Custom local invoker. Will run the local store for lambda invocation and handle via Lambda Runtime API
   sam-e-invoker:
     init: true
     image: tompope94/sam-e-invoker
@@ -16,6 +38,9 @@ services:
     ports:
       - 3000:3000
     mem_limit: 250m
+
+  # *********************** Custom lambdas ***************************
+  # Each of the lambda functions is run as a separate docker container that will communicate with the local invoker
 {% for lambda in lambdas %}
   {{lambda.name}}:
     init: true
@@ -36,4 +61,94 @@ services:
       {% for key, value in lambda.environment_vars -%}
       - {{key}}={{value}}
       {% endfor -%}
-{% endfor -%}
+{% endfor %}
+
+  # *********************** Custom infrastructure ***************************
+  # Each of the local infrastructure needed depending on the infrastructure added in CloudFormation template
+{%- set postgres_container = false %}
+{%- set mysql_container = false %}
+{%- set sqs_container = false %}
+{%- set s3_container = false %}
+{%- for infra in infrastructure %}
+{%- if infra.infrastructure_type == "Mysql" and not mysql_container -%}
+  {%- set_global mysql_container = true %}
+  mysql-local:
+    init: true
+    image: crcdockerdevops/mysql:8.0.29
+    environment:
+      USER: user
+      PASSWORD: password
+    ports:
+      - 3306:3306
+    networks:
+      - development
+    volumes:
+      - mysql-local:/var/lib/mysql
+{%- elif infra.infrastructure_type == "Postgres" and not postgres_container -%}
+  {%- set_global postgres_container = true %}
+  postgres-local:
+    init: true
+    image: postgres:15
+    environment:
+      POSTGRES_PASSWORD: password
+      PGDATA: /var/lib/postgresql/data/pgdata
+    ports:
+      - 5432:5432
+    networks:
+      - development
+    volumes:
+      - postgres-local:/var/lib/postgresql/data
+{%- elif infra.infrastructure_type == "Sqs" and not sqs_container -%}
+  {%- set_global sqs_container = true %}
+  sqs-local:
+    init: true
+    image: softwaremill/elasticmq:1.3.14
+    ports:
+      - 9324:9324
+      - 9325:9325
+    networks:
+      - development
+    # NOTE: volumes don't work when using VM because this location refers to host
+    # volumes:
+    #   - ./local-queue/custom.conf:/opt/elasticmq.conf
+{%- elif infra.infrastructure_type == "S3" and not s3_container -%}
+  {%- set_global s3_container = true %}
+  s3-local:
+    init: true
+    image: s3-local
+    build:
+      context: ./local-s3/
+      dockerfile: Dockerfile
+    ports:
+      - 9000:9000
+      - 9001:9001
+    environment:
+      - MINIO_ROOT_USER=user
+      - MINIO_ROOT_PASSWORD=password
+    networks:
+      - development
+    volumes:
+      - s3-local:/mnt/data
+{%- endif %}
+{%- endfor %}
+
+  # dynamodb-local:
+  #   init: true
+  #   command: "-XX:-UsePerfData -Xmx10g -jar DynamoDBLocal.jar -inMemory -sharedDb"
+  #   image: "crcdockerdevops/dynamodb-local:1.20.0"
+  #   # image: "amazon/dynamodb-local:1.20.0"
+  #   ports:
+  #     - "8000:8000"
+  #   networks:
+  #     - development   
+  # 
+  # dynamodb-admin:
+  #   init: true
+  #   environment:
+  #     - DYNAMO_ENDPOINT=http://dynamodb-local:8000
+  #     - PORT=8001
+  #   image: crcdockerdevops/dynamodb-admin:4.1.0
+  #   ports:
+  #     - "8001:8001"    
+  #   networks:
+  #     - development
