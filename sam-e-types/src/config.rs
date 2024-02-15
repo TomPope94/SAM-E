@@ -24,6 +24,27 @@ impl Config {
     }
 
     pub fn set_lambdas(&mut self, lambdas: Vec<Lambda>) {
+        // For each lambda, set the infrastructure trigger (if not api event)
+        // This makes the invoker more efficient so we don't have to check all lambdas for each event
+        for lambda in lambdas.iter() {
+            for event in lambda.get_events() {
+                match event.get_event_type() {
+                    EventType::Sqs => {
+                        let queue_name = match event.get_properties() {
+                            Some(EventProperties::Sqs(sqs_properties)) => sqs_properties.queue.clone(),
+                            _ => String::new(),
+                        };
+                        for infrastructure in self.infrastructure.iter_mut() {
+                            if infrastructure.get_name() == queue_name {
+                                infrastructure.add_lambda_trigger(lambda.get_name().to_string());
+                            }
+                        }
+                    }
+                    _ => {}
+                }
+            }
+        }
+
         self.lambdas = lambdas;
     }
 
@@ -63,6 +84,8 @@ impl Runtime {
 pub struct Infrastructure {
     name: String,
     infrastructure_type: InfrastructureType,
+    lambda_triggers: Vec<String>,
+    queue_url: Option<String>, // TODO this should be a separate type for SQS
 }
 
 impl Infrastructure {
@@ -70,6 +93,8 @@ impl Infrastructure {
         Self {
             name,
             infrastructure_type,
+            lambda_triggers: Vec::new(),
+            queue_url: None,
         }
     }
 
@@ -79,6 +104,26 @@ impl Infrastructure {
 
     pub fn get_infrastructure_type(&self) -> &InfrastructureType {
         &self.infrastructure_type
+    }
+
+    pub fn get_lambda_triggers(&self) -> &Vec<String> {
+        &self.lambda_triggers
+    }
+
+    pub fn set_lambda_triggers(&mut self, lambda_triggers: Vec<String>) {
+        self.lambda_triggers = lambda_triggers;
+    }
+
+    pub fn add_lambda_trigger(&mut self, lambda_trigger: String) {
+        self.lambda_triggers.push(lambda_trigger);
+    }
+
+    pub fn set_queue_url(&mut self, queue_url: String) {
+        self.queue_url = Some(queue_url);
+    }
+
+    pub fn get_queue_url(&self) -> Option<&String> {
+        self.queue_url.as_ref()
     }
 }
 
@@ -91,9 +136,10 @@ pub enum InfrastructureType {
 }
 
 /// The types of events that can trigger a Lambda
-#[derive(Debug, Deserialize, Serialize, Clone)]
+#[derive(Debug, Deserialize, Serialize, Clone, Eq, PartialEq)]
 pub enum EventType {
     Api,
+    Sqs,
 }
 
 /// Properties for an API event
@@ -118,10 +164,17 @@ impl EventApiProperties {
     }
 }
 
+/// Properties for an SQS event
+#[derive(Debug, Deserialize, Serialize, Clone)]
+pub struct EventSqsProperties {
+    queue: String,
+}
+
 /// Properties for an event - abstracted to allow for different event types
 #[derive(Debug, Deserialize, Serialize, Clone)]
 pub enum EventProperties {
     Api(EventApiProperties),
+    Sqs(EventSqsProperties),
 }
 
 /// A Lambda function event as specified in the SAM template
@@ -142,6 +195,12 @@ impl Event {
                     method: String::new(),
                 })),
             },
+            EventType::Sqs => Self {
+                event_type,
+                properties: Some(EventProperties::Sqs(EventSqsProperties {
+                    queue: String::new(),
+                })),
+            },
         }
     }
 
@@ -156,9 +215,23 @@ impl Event {
         }
     }
 
-    pub fn get_event_type(&self) -> &str {
+    pub fn set_sqs_properties(&mut self, queue: String) {
+        match &mut self.properties {
+            Some(EventProperties::Sqs(sqs_properties)) => {
+                sqs_properties.queue = queue;
+            }
+            _ => {}
+        }
+    }
+
+    pub fn get_event_type(&self) -> &EventType {
+        &self.event_type
+    }
+
+    pub fn get_event_type_str(&self) -> &str {
         match self.event_type {
             EventType::Api => "Api",
+            EventType::Sqs => "Sqs",
         }
     }
 

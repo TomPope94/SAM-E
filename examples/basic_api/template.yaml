@@ -44,11 +44,6 @@ Resources:
             RestApiId: !Ref TestApiGateway
             Path: /{path+}
             Method: ANY
-        MySQSEvent:
-          Type: SQS
-          Properties:
-            Queue: !GetAtt TestDeliverySQS.Arn
-            BatchSize: 10
       Timeout: 30
       MemorySize: 50
       Environment:
@@ -82,6 +77,11 @@ Resources:
           Properties:
             Path: /test-lambda-node-route
             Method: ANY
+        MySQSEvent:
+          Type: SQS
+          Properties:
+            Queue: !GetAtt TestDeliverySQS.Arn
+            BatchSize: 10
   # TestQueueTriggerNode:
   #   Type: AWS::Serverless::Function
   #   Properties:

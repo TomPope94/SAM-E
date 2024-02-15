@@ -82,41 +82,65 @@ pub fn get_lambdas_from_resources(resources: &HashMap<String, serde_yaml::Value>
                 let events: HashMap<String, Value> =
                     serde_yaml::from_value(resource["Properties"]["Events"].to_owned())
                         .unwrap_or(HashMap::new());
+                debug!("Events: {:?}", events);
 
                 let events_vec: Vec<Event> = events
                     .iter()
-                    .filter(|(_, event_data)| event_data["Type"] == "Api")
                     .map(|(_, event_data)| {
-                        let base_path =
-                            if let Some(api_id) = event_data["Properties"]["RestApiId"].as_str() {
-                                get_base_path(api_id, &resources)
-                            } else {
-                                None
-                            };
+                        if event_data["Type"].as_str().unwrap_or("") == "Api" {
+                            let base_path =
+                                if let Some(api_id) = event_data["Properties"]["RestApiId"].as_str() {
+                                    get_base_path(api_id, &resources)
+                                } else {
+                                    None
+                                };
 
-                        let path = event_data["Properties"]["Path"].as_str();
-                        if path.is_none() {
-                            warn!("Path not found for event despite type being API, skipping...");
-                            warn!("Container: {}", resource_name);
-                            return Event::new(EventType::Api);
+                            let path = event_data["Properties"]["Path"].as_str();
+                            if path.is_none() {
+                                warn!("Path not found for event despite type being API, skipping...");
+                                warn!("Container: {}", resource_name);
+                                return Event::new(EventType::Api);
+                            }
+
+                            let method =
+                                if let Some(method) = event_data["Properties"]["Method"].as_str() {
+                                    method.to_string()
+                                } else {
+                                    warn!(
+                                        "Method was not parsed correctly for container: {}",
+                                        resource_name
+                                    );
+                                    warn!("Defaulting to ANY");
+                                    "ANY".to_string()
+                                };
+
+                            let mut event = Event::new(EventType::Api);
+                            event.set_api_properties(path.unwrap().to_string(), base_path, method);
+
+                            return event;
                         }
 
-                        let method =
-                            if let Some(method) = event_data["Properties"]["Method"].as_str() {
-                                method.to_string()
-                            } else {
-                                warn!(
-                                    "Method was not parsed correctly for container: {}",
-                                    resource_name
-                                );
-                                warn!("Defaulting to ANY");
-                                "ANY".to_string()
-                            };
+                        if event_data["Type"].as_str().unwrap_or("") == "SQS" {
+                            let queue = event_data["Properties"]["Queue"].as_str();
+                            if queue.is_none() {
+                                warn!("Queue not found for event despite type being SQS, skipping...");
+                                warn!("Container: {}", resource_name);
+                                return Event::new(EventType::Sqs);
+                            }
 
-                        let mut event = Event::new(EventType::Api);
-                        event.set_api_properties(path.unwrap().to_string(), base_path, method);
+                            if let Some(queue) = queue {
+                                let queue_cleaned = queue.replace("!GetaAtt ", "").replace(".Arn", "");
 
-                        event
+                                let mut event = Event::new(EventType::Sqs);
+                                event.set_sqs_properties(queue_cleaned.to_string());
+
+                                return event;
+                            }
+                        }
+
+                        warn!("Event type not recognized, setting as default API but will not be usable...");
+                        warn!("Container: {}", resource_name);
+                        Event::new(EventType::Api)
                     })
                     .collect();
 

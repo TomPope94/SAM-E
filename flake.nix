@@ -44,6 +44,7 @@
             cargo-edit
             cargo-watch
             rust-analyzer
+            darwin.apple_sdk.frameworks.Security
           ];
         };
       });

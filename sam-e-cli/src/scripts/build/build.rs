@@ -71,8 +71,8 @@ pub fn build(args: BuildArgs) -> anyhow::Result<()> {
             fs::read_to_string(format!("{}/sam-e-config.yaml", sam_e_directory_path))?;
         let mut config: Config = serde_yaml::from_str(&current_config_raw)?;
 
-        config.set_lambdas(lambdas);
         config.set_infrastructure(infrastructure);
+        config.set_lambdas(lambdas);
         debug!("Config post build: {:#?}", config);
 
         let config_string = serde_yaml::to_string(&config)?;

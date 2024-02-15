@@ -1,6 +1,6 @@
-mod middleware;
 mod data;
 mod handlers;
+mod middleware;
 
 use axum::{
     routing::{get, post},
@@ -12,9 +12,9 @@ use tracing_subscriber::EnvFilter;
 
 use data::api::ApiState;
 use handlers::{
-        client::request,
-        invocation::{init_error, invocation_error, next, response},
-    };
+    client::{queues, request},
+    invocation::{init_error, invocation_error, next, response},
+};
 
 use sam_e_types::config::Config;
 
@@ -71,6 +71,11 @@ async fn main() -> anyhow::Result<()> {
         )
         .layer(middleware::cors_layer())
         .with_state(api_state);
+
+    tokio::spawn(async move {
+        info!("Starting polling queues for messages");
+        queues::listen_to_queues(&config).await;
+    });
 
     let listener = tokio::net::TcpListener::bind("0.0.0.0:3000").await.unwrap();
     info!("listening on {}", listener.local_addr().unwrap());
