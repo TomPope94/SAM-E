@@ -1,6 +1,9 @@
 use crate::data::store::Store;
 
-use sam_e_types::config::{Config, EventProperties, EventType};
+use sam_e_types::config::{
+    lambda::{EventProperties, EventType},
+    Config,
+};
 
 use fancy_regex::Regex;
 use std::collections::HashMap;

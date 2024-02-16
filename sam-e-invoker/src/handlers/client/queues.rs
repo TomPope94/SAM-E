@@ -1,11 +1,11 @@
-use aws_config::{
-    meta::region::RegionProviderChain, profile::ProfileFileCredentialsProvider, retry::RetryConfig,
-    BehaviorVersion,
-};
+use aws_config::{profile::ProfileFileCredentialsProvider, BehaviorVersion};
 use aws_sdk_sqs::{config::Region, Client};
-use sam_e_types::config::{Config, Infrastructure, InfrastructureType};
+use sam_e_types::config::{
+    infrastructure::{Infrastructure, InfrastructureType},
+    Config,
+};
 use tokio::time::{sleep, Duration};
-use tracing::{debug, error, trace};
+use tracing::{debug, error, trace, warn};
 
 pub async fn listen_to_queues(config: &Config) {
     let queues = get_queues_from_config(config);
@@ -15,16 +15,10 @@ pub async fn listen_to_queues(config: &Config) {
             debug!("Queue doesn't exist, creating: {}", queue.get_name());
             if let Ok(queue_url) = create_queue(&queue).await {
                 debug!("Created queue: {}", queue_url);
-                    queue.set_queue_url(queue_url);
+                queue.set_queue_url(queue_url);
             } else {
-                error!("Failed to create queue: {}", queue.get_name());
+                warn!("Failed to create queue: {}", queue.get_name());
             }
-            // match create_queue(&queue).await {
-            //     Ok(queue_url) => {
-            //         debug!("Created queue: {}", queue_url);
-            //     },
-            //     Err(e) => error!("Failed to create queue: {}", e),
-            // }
         } else {
             debug!("Queue exists: {}", queue.get_name());
         }
@@ -108,11 +102,7 @@ async fn create_queue(queue: &Infrastructure) -> anyhow::Result<String> {
     let client = get_aws_client().await;
     debug!("Client created: {:?}", client);
 
-    let created_queue = client
-        .create_queue()
-        .queue_name(queue_name)
-        .send()
-        .await;
+    let created_queue = client.create_queue().queue_name(queue_name).send().await;
 
     debug!("Queue created: {:?}", created_queue);
 
