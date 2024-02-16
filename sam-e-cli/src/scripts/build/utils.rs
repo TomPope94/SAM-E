@@ -1,5 +1,8 @@
-use sam_e_types::config::{Event, EventType, Lambda, Infrastructure, InfrastructureType};
 use anyhow::Error;
+use sam_e_types::config::{
+    infrastructure::{Infrastructure, InfrastructureType},
+    lambda::{Event, EventType, Lambda},
+};
 use serde_yaml::Value;
 use std::{
     collections::HashMap,
@@ -158,7 +161,9 @@ pub fn get_lambdas_from_resources(resources: &HashMap<String, serde_yaml::Value>
     lambdas
 }
 
-pub fn get_infrastructure_from_resources(resources: &HashMap<String, serde_yaml::Value>) -> Vec<Infrastructure> {
+pub fn get_infrastructure_from_resources(
+    resources: &HashMap<String, serde_yaml::Value>,
+) -> Vec<Infrastructure> {
     let mut infrastructure = vec![];
 
     for (resource_name, resource) in resources.iter() {
@@ -171,12 +176,18 @@ pub fn get_infrastructure_from_resources(resources: &HashMap<String, serde_yaml:
                 if let Some(engine) = resource["Properties"].get("Engine") {
                     if engine.as_str().unwrap().contains("postgresql") {
                         trace!("Database engine recognized as Postgres");
-                        infrastructure.push(Infrastructure::new(resource_name.to_string(), InfrastructureType::Postgres));
+                        infrastructure.push(Infrastructure::new(
+                            resource_name.to_string(),
+                            InfrastructureType::Postgres,
+                        ));
                     }
 
                     if engine.as_str().unwrap().contains("mysql") {
                         trace!("Database engine recognized as MySQL");
-                        infrastructure.push(Infrastructure::new(resource_name.to_string(), InfrastructureType::Mysql));
+                        infrastructure.push(Infrastructure::new(
+                            resource_name.to_string(),
+                            InfrastructureType::Mysql,
+                        ));
                     }
                 } else {
                     error!("No engine type found for DB instance: {}", resource_name);
@@ -185,14 +196,20 @@ pub fn get_infrastructure_from_resources(resources: &HashMap<String, serde_yaml:
 
             if resource_type == "AWS::SQS::Queue" {
                 trace!("Found a queue!");
-                infrastructure.push(Infrastructure::new(resource_name.to_string(), InfrastructureType::Sqs));
+                infrastructure.push(Infrastructure::new(
+                    resource_name.to_string(),
+                    InfrastructureType::Sqs,
+                ));
             }
 
             if resource_type == "AWS::S3::Bucket" {
                 trace!("Found a bucket!");
 
                 if let Some(bucket_name) = resource["Properties"].get("BucketName") {
-                    infrastructure.push(Infrastructure::new(bucket_name.as_str().unwrap().to_string(), InfrastructureType::S3));
+                    infrastructure.push(Infrastructure::new(
+                        bucket_name.as_str().unwrap().to_string(),
+                        InfrastructureType::S3,
+                    ));
                 } else {
                     error!("No bucket name provided for S3 bucket: {}", resource_name);
                 }
@@ -231,7 +248,7 @@ fn get_base_path(
 
 /// Builds the template for an individual CloudFormation template returning a hashmap of just
 /// the resources section. Starts by reading the file to a string before passing to serde_yaml to
-/// be parsed into the HashMap. 
+/// be parsed into the HashMap.
 fn build_template(template: &PathBuf) -> anyhow::Result<HashMap<String, Value>> {
     debug!("Building template: {:?}", template);
 

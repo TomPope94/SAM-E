@@ -1,4 +1,4 @@
-use sam_e_types::config::{Config, Runtime};
+use sam_e_types::config::config::{Config, Runtime};
 
 use std::{env, fs};
 use tracing::{debug, info};

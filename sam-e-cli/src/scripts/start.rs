@@ -1,6 +1,6 @@
-use tracing::{debug, error, info};
-use std::{env, fs, process::Command};
 use sam_e_types::config::Config;
+use std::{env, fs, process::Command};
+use tracing::{debug, error, info};
 
 const SAM_E_DIRECTORY: &str = ".sam-e";
 
@@ -25,8 +25,7 @@ pub async fn start() -> anyhow::Result<()> {
     let config_location = format!("{}/sam-e-config.yaml", &sam_e_directory_path);
 
     // Reads the current config file
-    let current_config_raw =
-        fs::read_to_string(config_location)?;
+    let current_config_raw = fs::read_to_string(config_location)?;
     let config: Config = serde_yaml::from_str(&current_config_raw)?;
     let config_string = serde_yaml::to_string(&config)?;
 

@@ -1,12 +1,18 @@
 use crate::{
     data::cli::BuildArgs,
     scripts::{
-        build::utils::{collect_template_to_resource, get_lambdas_from_resources, get_infrastructure_from_resources},
+        build::utils::{
+            collect_template_to_resource, get_infrastructure_from_resources,
+            get_lambdas_from_resources,
+        },
         init,
     },
 };
 
-use sam_e_types::config::{Config, Infrastructure, InfrastructureType};
+use sam_e_types::config::{
+    infrastructure::{Infrastructure, InfrastructureType},
+    Config,
+};
 
 use anyhow::Error;
 use rust_embed::RustEmbed;
@@ -93,7 +99,7 @@ pub fn build(args: BuildArgs) -> anyhow::Result<()> {
 fn create_infrastructure_files(config: &Config) -> anyhow::Result<()> {
     let infrastructure = config.get_infrastructure();
 
-    if let true = has_infrastructure_type(infrastructure, InfrastructureType::S3) { 
+    if let true = has_infrastructure_type(infrastructure, InfrastructureType::S3) {
         info!("Detected S3 infrastructure. Creating required files within .sam-e directory");
         fs::create_dir_all(format!("{}/local-s3", SAM_E_DIRECTORY))?;
     }
@@ -114,7 +120,7 @@ fn create_infrastructure_files(config: &Config) -> anyhow::Result<()> {
         tera.add_raw_template("s3-dockerfile", &String::from_utf8_lossy(&raw_data))?;
     } else {
         error!("Failed to find S3 Dockerfile template");
-        return Err(Error::msg("Failed to find S3 Dockerfile template"))
+        return Err(Error::msg("Failed to find S3 Dockerfile template"));
     };
 
     if let Some(queue_config) = Asset::get("local-queue/custom.conf") {
@@ -122,7 +128,7 @@ fn create_infrastructure_files(config: &Config) -> anyhow::Result<()> {
         tera.add_raw_template("queue-config", &String::from_utf8_lossy(&raw_data))?;
     } else {
         error!("Failed to find queue config template");
-        return Err(Error::msg("Failed to find queue config template"))
+        return Err(Error::msg("Failed to find queue config template"));
     };
 
     if let Some(docker_template) = Asset::get("docker-compose.yaml") {
@@ -130,7 +136,7 @@ fn create_infrastructure_files(config: &Config) -> anyhow::Result<()> {
         tera.add_raw_template("docker-compose", &String::from_utf8_lossy(&raw_data))?;
     } else {
         error!("Failed to find docker-compose template");
-        return Err(Error::msg("Failed to find docker-compose template"))
+        return Err(Error::msg("Failed to find docker-compose template"));
     };
 
     create_s3_dockerfile(&tera, &context)?;
@@ -139,16 +145,21 @@ fn create_infrastructure_files(config: &Config) -> anyhow::Result<()> {
     Ok(())
 }
 
-fn has_infrastructure_type(infrastructure: &Vec<Infrastructure> , infrastructure_type: InfrastructureType) -> bool {
-    infrastructure.iter().any(|i| i.get_infrastructure_type() == &infrastructure_type)
-} 
+fn has_infrastructure_type(
+    infrastructure: &Vec<Infrastructure>,
+    infrastructure_type: InfrastructureType,
+) -> bool {
+    infrastructure
+        .iter()
+        .any(|i| i.get_infrastructure_type() == &infrastructure_type)
+}
 
 fn create_docker_compose(tera: &Tera, context: &Context) -> anyhow::Result<()> {
-        let result = tera.render("docker-compose", &context)?;
+    let result = tera.render("docker-compose", &context)?;
 
-        fs::write(format!("{}/docker-compose.yaml", SAM_E_DIRECTORY), result)?;
+    fs::write(format!("{}/docker-compose.yaml", SAM_E_DIRECTORY), result)?;
 
-        Ok(())
+    Ok(())
 }
 
 fn create_s3_dockerfile(tera: &Tera, context: &Context) -> anyhow::Result<()> {
@@ -164,7 +175,10 @@ fn create_queue_config(tera: &Tera, context: &Context) -> anyhow::Result<()> {
     // passed as volume in dockerfile...
     let result = tera.render("queue-config", &context)?;
 
-    fs::write(format!("{}/local-queue/custom.conf", SAM_E_DIRECTORY), result)?;
+    fs::write(
+        format!("{}/local-queue/custom.conf", SAM_E_DIRECTORY),
+        result,
+    )?;
 
     Ok(())
 }
