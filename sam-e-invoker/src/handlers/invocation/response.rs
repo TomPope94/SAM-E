@@ -61,6 +61,14 @@ pub async fn response_handler(
                         serde_json::from_slice(&body).unwrap();
                     invocation.set_response(ResponseType::Api(response_data));
                 }
+                EventSource::Sqs => {
+                    // let response_data: ApiGatewayProxyResponse =
+                    //     serde_json::from_slice(&body).unwrap();
+                    // invocation.set_response(ResponseType::Sqs(response_data));
+
+                    debug!("SQS response not yet implemented");
+                    // TODO: remove the processed messages from the queue...
+                }
             }
 
             trace!("New invocation... {:?}", invocation);

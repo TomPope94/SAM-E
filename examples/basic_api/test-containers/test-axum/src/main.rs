@@ -45,7 +45,7 @@ async fn post_foo_name(Path(name): Path<String>) -> Json<Value> {
     Json(json!({ "msg": format!("I am POST /foo/:name, name={name}") }))
 }
 
-async fn add_message(Path(queue_name): Path<String>) -> Json<Value> {
+async fn add_message(Path((queue_name, name)): Path<(String, String)>) -> Json<Value> {
     info!("Creating AWS SQS client");
     let region = Region::new("eu-west-2");
 
@@ -68,7 +68,7 @@ async fn add_message(Path(queue_name): Path<String>) -> Json<Value> {
             let send_msg = client
                 .send_message()
                 .queue_url(url)
-                .message_body("Hello from Rust!")
+                .message_body(format!("Hello {}", name))
                 .send()
                 .await;
             if let Ok(send_msg_resp) = send_msg {
@@ -128,7 +128,7 @@ async fn main() -> Result<(), Error> {
         .route("/Prod/foo", get(get_foo).post(post_foo))
         .route("/Prod/foo/:name", post(post_foo_name))
         .route("/Prod/health/", get(health_check))
-        .route("/Prod/add/:queue_name", post(add_message))
+        .route("/Prod/add/:queue_name/:name", post(add_message))
         .route_layer(axum::middleware::from_fn(context_mw));
 
     run(app).await

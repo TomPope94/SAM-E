@@ -53,6 +53,27 @@ services:
     networks:
       - development
 
+  test-s3-upload:
+    init: true
+    image: test-s3-upload
+    build:
+      context: ./test-s3-upload
+      dockerfile: Dockerfile
+    environment:
+      # - RUST_LOG=aws_smithy_http=trace,aws_config=trace,aws_sigv4=trace,app=trace,lambda_runtime=trace
+      - RUST_LOG=trace
+      # - RUST_BACKTRACE=1
+      - AWS_LAMBDA_RUNTIME_API=http://sammy:3000/test-s3-upload
+      - AWS_LAMBDA_FUNCTION_NAME=TestS3Upload
+      - AWS_LAMBDA_FUNCTION_MEMORY_SIZE=50
+      - AWS_LAMBDA_FUNCTION_VERSION=1
+      - AWS_LAMBDA_LOG_STREAM_NAME=TestS3Upload
+      - AWS_LAMBDA_LOG_GROUP_NAME=aws/lambda/TestS3Upload
+    deploy:
+      replicas: 1
+    networks:
+      - development
+
 networks:
   development:
     attachable: true

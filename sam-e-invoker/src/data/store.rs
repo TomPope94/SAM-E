@@ -3,7 +3,6 @@ use std::{collections::HashMap, sync::Arc};
 use aws_lambda_events::{
     apigw::ApiGatewayProxyResponse,
     event::{apigw::ApiGatewayProxyRequest, sqs::SqsEvent},
-    streams::SqsEventResponse,
 };
 use chrono::{DateTime, Local};
 use parking_lot::RwLock;
@@ -22,7 +21,7 @@ pub enum Status {
 #[derive(Debug, Deserialize, Serialize, Clone)]
 pub enum EventSource {
     Api,
-    // Sqs,
+    Sqs,
 }
 
 #[derive(Debug, Deserialize, Serialize, Clone)]
@@ -34,7 +33,7 @@ pub enum RequestType {
 #[derive(Debug, Deserialize, Serialize, Clone)]
 pub enum ResponseType {
     Api(ApiGatewayProxyResponse),
-    Sqs(SqsEventResponse),
+    Sqs(ApiGatewayProxyResponse),
 }
 
 #[derive(Debug, Deserialize, Serialize, Clone)]
@@ -53,7 +52,7 @@ impl Invocation {
     pub fn new(event_source: EventSource) -> Self {
         match event_source {
             EventSource::Api => Self::new_api(),
-            // EventSource::Sqs => Self::new_sqs(),
+            EventSource::Sqs => Self::new_sqs(),
         }
     }
 
@@ -70,18 +69,19 @@ impl Invocation {
         }
     }
 
-    // pub fn new_sqs() -> Self {
-    //     Self {
-    //         request_id: Uuid::new_v4(),
-    //         date_time: Local::now(),
-    //         status: Status::Pending,
-    //         request: RequestType::Sqs(SqsEvent::default()),
-    //         response: ResponseType::Sqs(SqsEventResponse),
-    //         event_source: EventSource::Sqs,
-    //         sqs_queue_url: None,
-    //         response_headers: HashMap::new(),
-    //     }
-    // }
+    pub fn new_sqs() -> Self {
+        Self {
+            request_id: Uuid::new_v4(),
+            date_time: Local::now(),
+            status: Status::Pending,
+            request: RequestType::Sqs(SqsEvent::default()),
+            response: ResponseType::Sqs(ApiGatewayProxyResponse::default()), //TODO: Check this is
+                                                                             //correct
+            event_source: EventSource::Sqs,
+            sqs_queue_url: None,
+            response_headers: HashMap::new(),
+        }
+    }
 
     pub fn get_event_source(&self) -> &EventSource {
         &self.event_source

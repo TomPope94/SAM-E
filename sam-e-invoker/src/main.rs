@@ -35,6 +35,7 @@ async fn main() -> anyhow::Result<()> {
     let config: Config = serde_yaml::from_str(&config_env_string)?;
 
     let api_state = ApiState::new(&config);
+    let cloned_store = api_state.get_store().clone();
 
     info!("Setting up invocation endpoints for Lambda runtime API");
 
@@ -74,7 +75,7 @@ async fn main() -> anyhow::Result<()> {
 
     tokio::spawn(async move {
         info!("Starting polling queues for messages");
-        queues::listen_to_queues(&config).await;
+        queues::listen_to_queues(&config, cloned_store).await;
     });
 
     let listener = tokio::net::TcpListener::bind("0.0.0.0:3000").await.unwrap();

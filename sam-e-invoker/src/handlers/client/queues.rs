@@ -1,4 +1,7 @@
+use std::collections::HashMap;
+
 use aws_config::{profile::ProfileFileCredentialsProvider, BehaviorVersion};
+use aws_lambda_events::sqs::{SqsEvent, SqsMessage};
 use aws_sdk_sqs::{config::Region, Client};
 use sam_e_types::config::{
     infrastructure::{Infrastructure, InfrastructureType},
@@ -7,7 +10,9 @@ use sam_e_types::config::{
 use tokio::time::{sleep, Duration};
 use tracing::{debug, error, trace, warn};
 
-pub async fn listen_to_queues(config: &Config) {
+use crate::{data::store::{EventSource, Invocation, RequestType, Store}, handlers::client::utils::write_invocation_to_store};
+
+pub async fn listen_to_queues(config: &Config, store: Store) {
     let queues = get_queues_from_config(config);
 
     for mut queue in queues {
@@ -23,14 +28,16 @@ pub async fn listen_to_queues(config: &Config) {
             debug!("Queue exists: {}", queue.get_name());
         }
 
+        let write_store = store.clone();
+
         tokio::spawn(async move {
             debug!("SQS Client to poll queue: {}", queue.get_name());
-            poll_queue(&queue).await;
+            poll_queue(&queue, &write_store).await;
         });
     }
 }
 
-pub async fn poll_queue(queue: &Infrastructure) {
+pub async fn poll_queue(queue: &Infrastructure, store: &Store) {
     debug!("Polling queue: {}", queue.get_name());
     let client = get_aws_client().await;
 
@@ -48,8 +55,36 @@ pub async fn poll_queue(queue: &Infrastructure) {
             match receive_message {
                 Ok(response) => {
                     if let Some(messages) = response.messages {
-                        for message in messages {
-                            debug!("Message: {:?}", message);
+                        let formatted_messages = messages
+                            .iter()
+                            .map(|m| SqsMessage {
+                                message_id: m.message_id.clone(),
+                                receipt_handle: m.receipt_handle.clone(),
+                                body: m.body.clone(),
+                                attributes: HashMap::new(),
+                                md5_of_body: m.md5_of_body.clone(),
+                                event_source: Some(queue.get_name().to_string()),
+                                aws_region: Some("eu-west-2".to_string()),
+                                event_source_arn: None,
+                                md5_of_message_attributes: None,
+                                message_attributes: HashMap::new(),
+                            })
+                            .collect::<Vec<SqsMessage>>();
+
+                        if formatted_messages.len() > 0 {
+                            debug!("Messages: {:?}", formatted_messages);
+                            let container_names = queue.get_lambda_triggers();
+                            let mut invocation = Invocation::new(EventSource::Sqs);
+                            let sqs_event = SqsEvent {
+                                records: formatted_messages,
+                            };
+                            invocation.set_request(RequestType::Sqs(sqs_event));
+
+                            for container in container_names {
+                                // TODO add invocation to each container queue in store
+                                debug!("Adding SQS invocation for container: {}", container);
+                                let _ = write_invocation_to_store(invocation.clone(), container, &store);
+                            }
                         }
                     }
                 }

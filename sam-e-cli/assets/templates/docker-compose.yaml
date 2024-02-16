@@ -33,11 +33,15 @@ services:
     environment:
       - RUST_LOG=aws_smithy_http=debug,aws_config=debug,aws_sigv4=debug,app=info
       - CONFIG=$CONFIG
+    depends_on:
+      - sqs-local
     networks:
       - development
     ports:
       - 3000:3000
     mem_limit: 250m
+    volumes:
+      - /home/ubuntu/.aws/credentials:/root/.aws/credentials:ro
 
   # *********************** Custom lambdas ***************************
   # Each of the lambda functions is run as a separate docker container that will communicate with the local invoker
@@ -102,7 +106,7 @@ services:
   {%- set_global sqs_container = true %}
   sqs-local:
     init: true
-    image: softwaremill/elasticmq:1.3.14
+    image: softwaremill/elasticmq-native
     ports:
       - 9324:9324
       - 9325:9325

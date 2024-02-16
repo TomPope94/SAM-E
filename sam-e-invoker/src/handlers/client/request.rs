@@ -67,7 +67,7 @@ pub async fn request_handler(
     // runtime api
     let _ = write_invocation_to_store(
         new_invocation,
-        &matched_route_unwrapped,
+        &matched_route_unwrapped.container_name,
         api_state.get_store(),
     );
 
