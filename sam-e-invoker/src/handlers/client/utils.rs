@@ -18,7 +18,7 @@ use uuid::Uuid;
 
 pub fn write_invocation_to_store(
     invocation: Invocation,
-    route: &Route,
+    container_name: &str,
     store: &Store,
 ) -> Result<(), String> {
     let write_queue = InvocationQueue::new();
@@ -26,13 +26,13 @@ pub fn write_invocation_to_store(
     store
         .queues
         .write()
-        .entry(route.container_name.to_owned())
+        .entry(container_name.to_owned())
         .or_insert(write_queue)
         .get_invocations_mut()
         .push(invocation.to_owned());
 
     let _ = invocation.get_request_id().to_owned();
-    trace!("Invocation written to store: {:?}", invocation);
+    debug!("Invocation written to store: {:?}", invocation);
     Ok(())
 }
 

@@ -1,5 +1,8 @@
-use sam_e_types::config::{Event, EventType, Lambda, Infrastructure, InfrastructureType};
 use anyhow::Error;
+use sam_e_types::config::{
+    infrastructure::{Infrastructure, InfrastructureType},
+    lambda::{Event, EventType, Lambda},
+};
 use serde_yaml::Value;
 use std::{
     collections::HashMap,
@@ -82,41 +85,65 @@ pub fn get_lambdas_from_resources(resources: &HashMap<String, serde_yaml::Value>
                 let events: HashMap<String, Value> =
                     serde_yaml::from_value(resource["Properties"]["Events"].to_owned())
                         .unwrap_or(HashMap::new());
+                debug!("Events: {:?}", events);
 
                 let events_vec: Vec<Event> = events
                     .iter()
-                    .filter(|(_, event_data)| event_data["Type"] == "Api")
                     .map(|(_, event_data)| {
-                        let base_path =
-                            if let Some(api_id) = event_data["Properties"]["RestApiId"].as_str() {
-                                get_base_path(api_id, &resources)
-                            } else {
-                                None
-                            };
+                        if event_data["Type"].as_str().unwrap_or("") == "Api" {
+                            let base_path =
+                                if let Some(api_id) = event_data["Properties"]["RestApiId"].as_str() {
+                                    get_base_path(api_id, &resources)
+                                } else {
+                                    None
+                                };
 
-                        let path = event_data["Properties"]["Path"].as_str();
-                        if path.is_none() {
-                            warn!("Path not found for event despite type being API, skipping...");
-                            warn!("Container: {}", resource_name);
-                            return Event::new(EventType::Api);
+                            let path = event_data["Properties"]["Path"].as_str();
+                            if path.is_none() {
+                                warn!("Path not found for event despite type being API, skipping...");
+                                warn!("Container: {}", resource_name);
+                                return Event::new(EventType::Api);
+                            }
+
+                            let method =
+                                if let Some(method) = event_data["Properties"]["Method"].as_str() {
+                                    method.to_string()
+                                } else {
+                                    warn!(
+                                        "Method was not parsed correctly for container: {}",
+                                        resource_name
+                                    );
+                                    warn!("Defaulting to ANY");
+                                    "ANY".to_string()
+                                };
+
+                            let mut event = Event::new(EventType::Api);
+                            event.set_api_properties(path.unwrap().to_string(), base_path, method);
+
+                            return event;
                         }
 
-                        let method =
-                            if let Some(method) = event_data["Properties"]["Method"].as_str() {
-                                method.to_string()
-                            } else {
-                                warn!(
-                                    "Method was not parsed correctly for container: {}",
-                                    resource_name
-                                );
-                                warn!("Defaulting to ANY");
-                                "ANY".to_string()
-                            };
+                        if event_data["Type"].as_str().unwrap_or("") == "SQS" {
+                            let queue = event_data["Properties"]["Queue"].as_str();
+                            if queue.is_none() {
+                                warn!("Queue not found for event despite type being SQS, skipping...");
+                                warn!("Container: {}", resource_name);
+                                return Event::new(EventType::Sqs);
+                            }
 
-                        let mut event = Event::new(EventType::Api);
-                        event.set_api_properties(path.unwrap().to_string(), base_path, method);
+                            if let Some(queue) = queue {
+                                let queue_cleaned = queue.replace("!GetaAtt ", "").replace(".Arn", "");
 
-                        event
+                                let mut event = Event::new(EventType::Sqs);
+                                event.set_sqs_properties(queue_cleaned.to_string());
+
+                                return event;
+                            }
+                        }
+
+                        warn!("Event type not recognized, setting as default API but will not be usable...");
+                        warn!("Container: {}", resource_name);
+                        Event::new(EventType::Api)
                     })
                     .collect();
 
@@ -134,7 +161,9 @@ pub fn get_lambdas_from_resources(resources: &HashMap<String, serde_yaml::Value>
     lambdas
 }
 
-pub fn get_infrastructure_from_resources(resources: &HashMap<String, serde_yaml::Value>) -> Vec<Infrastructure> {
+pub fn get_infrastructure_from_resources(
+    resources: &HashMap<String, serde_yaml::Value>,
+) -> Vec<Infrastructure> {
     let mut infrastructure = vec![];
 
     for (resource_name, resource) in resources.iter() {
@@ -147,12 +176,18 @@ pub fn get_infrastructure_from_resources(resources: &HashMap<String, serde_yaml:
                 if let Some(engine) = resource["Properties"].get("Engine") {
                     if engine.as_str().unwrap().contains("postgresql") {
                         trace!("Database engine recognized as Postgres");
-                        infrastructure.push(Infrastructure::new(resource_name.to_string(), InfrastructureType::Postgres));
+                        infrastructure.push(Infrastructure::new(
+                            resource_name.to_string(),
+                            InfrastructureType::Postgres,
+                        ));
                     }
 
                     if engine.as_str().unwrap().contains("mysql") {
                         trace!("Database engine recognized as MySQL");
-                        infrastructure.push(Infrastructure::new(resource_name.to_string(), InfrastructureType::Mysql));
+                        infrastructure.push(Infrastructure::new(
+                            resource_name.to_string(),
+                            InfrastructureType::Mysql,
+                        ));
                     }
                 } else {
                     error!("No engine type found for DB instance: {}", resource_name);
@@ -161,14 +196,20 @@ pub fn get_infrastructure_from_resources(resources: &HashMap<String, serde_yaml:
 
             if resource_type == "AWS::SQS::Queue" {
                 trace!("Found a queue!");
-                infrastructure.push(Infrastructure::new(resource_name.to_string(), InfrastructureType::Sqs));
+                infrastructure.push(Infrastructure::new(
+                    resource_name.to_string(),
+                    InfrastructureType::Sqs,
+                ));
             }
 
             if resource_type == "AWS::S3::Bucket" {
                 trace!("Found a bucket!");
 
                 if let Some(bucket_name) = resource["Properties"].get("BucketName") {
-                    infrastructure.push(Infrastructure::new(bucket_name.as_str().unwrap().to_string(), InfrastructureType::S3));
+                    infrastructure.push(Infrastructure::new(
+                        bucket_name.as_str().unwrap().to_string(),
+                        InfrastructureType::S3,
+                    ));
                 } else {
                     error!("No bucket name provided for S3 bucket: {}", resource_name);
                 }
@@ -207,7 +248,7 @@ fn get_base_path(
 
 /// Builds the template for an individual CloudFormation template returning a hashmap of just
 /// the resources section. Starts by reading the file to a string before passing to serde_yaml to
-/// be parsed into the HashMap. 
+/// be parsed into the HashMap.
 fn build_template(template: &PathBuf) -> anyhow::Result<HashMap<String, Value>> {
     debug!("Building template: {:?}", template);
 

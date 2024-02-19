@@ -1,6 +1,6 @@
-mod middleware;
 mod data;
 mod handlers;
+mod middleware;
 
 use axum::{
     routing::{get, post},
@@ -12,9 +12,9 @@ use tracing_subscriber::EnvFilter;
 
 use data::api::ApiState;
 use handlers::{
-        client::request,
-        invocation::{init_error, invocation_error, next, response},
-    };
+    client::{queues, request},
+    invocation::{init_error, invocation_error, next, response},
+};
 
 use sam_e_types::config::Config;
 
@@ -34,7 +34,13 @@ async fn main() -> anyhow::Result<()> {
     let config_env_string = env::var("CONFIG").expect("CONFIG env variable not found");
     let config: Config = serde_yaml::from_str(&config_env_string)?;
 
-    let api_state = ApiState::new(&config);
+    let api_state = ApiState::new(&config).await;
+    let cloned_store = api_state.get_store().clone();
+
+    tokio::spawn(async move {
+        info!("Starting polling queues for messages");
+        queues::listen_to_queues(config, cloned_store).await;
+    });
 
     info!("Setting up invocation endpoints for Lambda runtime API");
 

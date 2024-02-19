@@ -1,13 +1,15 @@
 use std::{collections::HashMap, sync::Arc};
 
+use aws_config::{profile::ProfileFileCredentialsProvider, BehaviorVersion};
 use aws_lambda_events::{
     apigw::ApiGatewayProxyResponse,
     event::{apigw::ApiGatewayProxyRequest, sqs::SqsEvent},
-    streams::SqsEventResponse,
 };
+use aws_sdk_sqs::{config::Region, Client};
 use chrono::{DateTime, Local};
 use parking_lot::RwLock;
 use serde::{Deserialize, Serialize};
+use tracing::debug;
 use uuid::Uuid;
 
 use super::api::Route;
@@ -22,7 +24,7 @@ pub enum Status {
 #[derive(Debug, Deserialize, Serialize, Clone)]
 pub enum EventSource {
     Api,
-    // Sqs,
+    Sqs,
 }
 
 #[derive(Debug, Deserialize, Serialize, Clone)]
@@ -34,7 +36,7 @@ pub enum RequestType {
 #[derive(Debug, Deserialize, Serialize, Clone)]
 pub enum ResponseType {
     Api(ApiGatewayProxyResponse),
-    Sqs(SqsEventResponse),
+    Sqs(ApiGatewayProxyResponse),
 }
 
 #[derive(Debug, Deserialize, Serialize, Clone)]
@@ -53,7 +55,7 @@ impl Invocation {
     pub fn new(event_source: EventSource) -> Self {
         match event_source {
             EventSource::Api => Self::new_api(),
-            // EventSource::Sqs => Self::new_sqs(),
+            EventSource::Sqs => Self::new_sqs(),
         }
     }
 
@@ -70,18 +72,19 @@ impl Invocation {
         }
     }
 
-    // pub fn new_sqs() -> Self {
-    //     Self {
-    //         request_id: Uuid::new_v4(),
-    //         date_time: Local::now(),
-    //         status: Status::Pending,
-    //         request: RequestType::Sqs(SqsEvent::default()),
-    //         response: ResponseType::Sqs(SqsEventResponse),
-    //         event_source: EventSource::Sqs,
-    //         sqs_queue_url: None,
-    //         response_headers: HashMap::new(),
-    //     }
-    // }
+    pub fn new_sqs() -> Self {
+        Self {
+            request_id: Uuid::new_v4(),
+            date_time: Local::now(),
+            status: Status::Pending,
+            request: RequestType::Sqs(SqsEvent::default()),
+            response: ResponseType::Sqs(ApiGatewayProxyResponse::default()), //TODO: Check this is
+            //correct
+            event_source: EventSource::Sqs,
+            sqs_queue_url: None,
+            response_headers: HashMap::new(),
+        }
+    }
 
     pub fn get_event_source(&self) -> &EventSource {
         &self.event_source
@@ -121,6 +124,14 @@ impl Invocation {
     pub fn get_response_headers(&self) -> &HashMap<String, String> {
         &self.response_headers
     }
+
+    // pub fn get_sqs_queue_url(&self) -> &Option<String> {
+    //     &self.sqs_queue_url
+    // }
+
+    pub fn set_sqs_queue_url(&mut self, url: String) {
+        self.sqs_queue_url = Some(url);
+    }
 }
 
 #[derive(Debug, Deserialize, Serialize, Clone)]
@@ -148,10 +159,11 @@ pub type InvocationQueues = HashMap<String, InvocationQueue>;
 #[derive(Clone, Debug)]
 pub struct Store {
     pub queues: Arc<RwLock<InvocationQueues>>,
+    pub sqs_client: Client,
 }
 
 impl Store {
-    pub fn new(sam_routes: &Option<HashMap<String, Route>>) -> Self {
+    pub async fn new(sam_routes: &Option<HashMap<String, Route>>) -> Self {
         let mut queues = HashMap::new();
         if let Some(routes) = sam_routes {
             for route in routes.values() {
@@ -159,8 +171,25 @@ impl Store {
             }
         }
 
+        debug!("Creating AWS SQS client");
+        let region = Region::new("eu-west-2");
+
+        let profile_provider = ProfileFileCredentialsProvider::builder()
+            .profile_name("staging-mfa")
+            .build();
+
+        let config = aws_config::defaults(BehaviorVersion::v2023_11_09())
+            .region(region)
+            .credentials_provider(profile_provider)
+            .endpoint_url("http://sqs-local:9324")
+            .load()
+            .await;
+
+        let sqs_client = Client::new(&config);
+
         Store {
             queues: Arc::new(RwLock::new(queues)),
+            sqs_client,
         }
     }
 }

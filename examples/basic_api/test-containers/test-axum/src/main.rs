@@ -18,8 +18,14 @@ use lambda_http::{
     Error,
 };
 use serde_json::{json, Value};
-use std::env::set_var;
-use tracing::info;
+use tracing::{error, info};
+use tracing_subscriber::EnvFilter;
+
+use aws_config::{
+    profile::ProfileFileCredentialsProvider, 
+    BehaviorVersion,
+};
+use aws_sdk_sqs::{config::Region, Client};
 
 async fn root() -> Json<Value> {
     info!("root() called");
@@ -38,6 +44,49 @@ async fn post_foo() -> Json<Value> {
 async fn post_foo_name(Path(name): Path<String>) -> Json<Value> {
     Json(json!({ "msg": format!("I am POST /foo/:name, name={name}") }))
 }
+
+async fn add_message(Path((queue_name, name)): Path<(String, String)>) -> Json<Value> {
+    info!("Creating AWS SQS client");
+    let region = Region::new("eu-west-2");
+
+    let profile_provider = ProfileFileCredentialsProvider::builder()
+        .profile_name("staging-mfa")
+        .build();
+
+    let config = aws_config::defaults(BehaviorVersion::v2023_11_09())
+        .region(region)
+        .credentials_provider(profile_provider)
+        .endpoint_url("http://sqs-local:9324")
+        .load()
+        .await;
+
+    let client = Client::new(&config);
+    
+    let queue_url = client.get_queue_url().queue_name(queue_name).send().await;
+    if let Ok(queue_url_resp) = queue_url {
+        if let Some(url) = queue_url_resp.queue_url() {
+            let send_msg = client
+                .send_message()
+                .queue_url(url)
+                .message_body(format!("Hello {}", name))
+                .send()
+                .await;
+            if let Ok(send_msg_resp) = send_msg {
+                info!("Message sent: {:?}", send_msg_resp);
+                return Json(json!({ "msg": "Message added to queue" }));
+            } else {
+                error!("Failed to send message: {:?}", send_msg);
+                return Json(json!({ "msg": "Failed to send message" }));
+            }
+        } else {
+            error!("Failed to get queue url: {:?}", queue_url_resp);
+            return Json(json!({ "msg": "Failed to get queue url successfully" }));
+        }
+    }
+    error!("Failed to get queue url: {:?}", queue_url);
+    return Json(json!({ "msg": "Failed to get queue url completely" }));
+}
+
 
 /// Example on how to return status codes and data from an Axum function
 async fn health_check() -> (StatusCode, String) {
@@ -65,7 +114,7 @@ async fn context_mw(req: axum::extract::Request, next: axum::middleware::Next) -
 async fn main() -> Result<(), Error> {
     // required to enable CloudWatch error logging by the runtime
     tracing_subscriber::fmt()
-        .with_max_level(tracing::Level::TRACE)
+        .with_env_filter(EnvFilter::from_default_env())
         // disable printing the name of the module in every log line.
         // .with_target(false)
         // disabling time is handy because CloudWatch will add the ingestion time.
@@ -79,6 +128,7 @@ async fn main() -> Result<(), Error> {
         .route("/Prod/foo", get(get_foo).post(post_foo))
         .route("/Prod/foo/:name", post(post_foo_name))
         .route("/Prod/health/", get(health_check))
+        .route("/Prod/add/:queue_name/:name", post(add_message))
         .route_layer(axum::middleware::from_fn(context_mw));
 
     run(app).await

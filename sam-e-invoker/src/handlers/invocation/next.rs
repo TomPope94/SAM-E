@@ -3,7 +3,6 @@ use crate::data::{
     store::{InvocationQueue, RequestType, Status},
 };
 
-use aws_lambda_events::apigw::ApiGatewayProxyRequest;
 use axum::{
     extract::{Path, State},
     http::StatusCode,
@@ -91,6 +90,9 @@ pub async fn request_handler(
             RequestType::Api(api_request) => {
                 debug!("Detected invocation source as API Gateway");
                 debug!("Event being sent: {:#?}", api_request);
+
+                let data_as_value = serde_json::to_value(api_request).unwrap();
+
                 return (
                     StatusCode::OK,
                     [
@@ -100,11 +102,14 @@ pub async fn request_handler(
                         ),
                         ("lambda-runtime-deadline-ms", dt.timestamp().to_string()),
                     ],
-                    Json(api_request.to_owned()),
+                    Json(data_as_value),
                 );
             }
-            RequestType::Sqs(_sqs_request) => {
+            RequestType::Sqs(sqs_request) => {
                 debug!("Processing an SQS invocation");
+
+                let data_as_value = serde_json::to_value(sqs_request).unwrap();
+
                 return (
                     StatusCode::OK,
                     [
@@ -112,9 +117,9 @@ pub async fn request_handler(
                             "lambda-runtime-aws-request-id",
                             invocation_data.get_request_id().to_string(),
                         ),
-                        ("lambda-runtime-deadline-ms", "1600000000000".to_string()),
+                        ("lambda-runtime-deadline-ms", dt.timestamp().to_string()),
                     ],
-                    Json(ApiGatewayProxyRequest::default()),
+                    Json(data_as_value),
                 );
             }
         }
@@ -128,7 +133,9 @@ pub async fn request_handler(
                 ),
                 ("lambda-runtime-deadline-ms", "1600000000000".to_string()),
             ],
-            Json(ApiGatewayProxyRequest::default()),
+            Json(serde_json::json!({
+                "message": "No pending invocations found"
+            })),
         );
     }
 }

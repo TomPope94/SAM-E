@@ -1,6 +1,6 @@
-use tracing::{debug, error, info};
-use std::{env, fs, process::Command};
 use sam_e_types::config::Config;
+use std::{env, fs, process::Command};
+use tracing::{debug, error, info};
 
 const SAM_E_DIRECTORY: &str = ".sam-e";
 
@@ -23,17 +23,14 @@ pub async fn start() -> anyhow::Result<()> {
     info!("Reading the current configuration");
 
     let config_location = format!("{}/sam-e-config.yaml", &sam_e_directory_path);
-    let docker_compose_location = format!("{}/docker-compose.yaml", &sam_e_directory_path);
 
     // Reads the current config file
-    let current_config_raw =
-        fs::read_to_string(config_location)?;
+    let current_config_raw = fs::read_to_string(config_location)?;
     let config: Config = serde_yaml::from_str(&current_config_raw)?;
     let config_string = serde_yaml::to_string(&config)?;
 
     let mut sh = Command::new("sh");
-    
-    // let docker_cmd = format!("docker compose --compatibility -f {} up --remove-orphans --build", &docker_compose_location);
+
     let docker_cmd = "docker compose --compatibility up --remove-orphans --build";
 
     sh.arg("-c")

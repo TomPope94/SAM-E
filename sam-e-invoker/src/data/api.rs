@@ -1,6 +1,9 @@
 use crate::data::store::Store;
 
-use sam_e_types::config::{Config, EventProperties};
+use sam_e_types::config::{
+    lambda::{EventProperties, EventType},
+    Config,
+};
 
 use fancy_regex::Regex;
 use std::collections::HashMap;
@@ -13,16 +16,16 @@ pub struct ApiState {
 }
 
 impl ApiState {
-    pub fn new(config: &Config) -> Self {
+    pub async fn new(config: &Config) -> Self {
         let sam_routes = create_routes(config);
-        
+
         if let Some(sam_routes) = &sam_routes {
             info!("SAM routes detected, will pass into API state");
             debug!("SAM routes: {:#?}", sam_routes);
         }
 
         Self {
-            invocation_store: Store::new(&sam_routes),
+            invocation_store: Store::new(&sam_routes).await,
             sam_routes,
         }
         // if let Ok(sam_routes) = sam_routes {
@@ -91,7 +94,7 @@ fn create_routes(config: &Config) -> Option<HashMap<String, Route>> {
         let lambda_name = lambda.get_name();
         let lambda_events = lambda.get_events();
         lambda_events.iter().for_each(|event| {
-            if event.get_event_type() == "Api" {
+            if event.get_event_type() == &EventType::Api {
                 let props = event.get_properties();
 
                 if let Some(props) = props {
@@ -113,6 +116,9 @@ fn create_routes(config: &Config) -> Option<HashMap<String, Route>> {
                             );
 
                             routes.insert(format!("{}::{}", path, method), route);
+                        }
+                        _ => {
+                            debug!("Event detected as non-API event, skipping...");
                         }
                     }
                 }

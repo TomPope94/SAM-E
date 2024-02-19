@@ -29,6 +29,7 @@ RUN rustup target add x86_64-unknown-linux-gnu
 # Build
 WORKDIR /app
 COPY . .
+WORKDIR /app/sam-e-invoker
 RUN --mount=type=cache,target=/root/.cargo \
     --mount=type=cache,target=/app/target \
     cargo zigbuild --release --target aarch64-unknown-linux-gnu && \
@@ -47,6 +48,54 @@ RUN apt-get update && apt-get install -y \
     && rm -rf /var/lib/apt/lists/*
 
 COPY --from=builder /app/${TARGETPLATFORM} /app/app
+# COPY --from=builder /app/.sam-e /app/.sam-e
 
 ENTRYPOINT ["/app/app"]
 
+
+# Builder
+# FROM crcdockerdevops/rust-musl:1.76 AS chef
+#
+# ARG TARGETPLATFORM
+# RUN if [ "${TARGETPLATFORM#*linux/}" = "amd64" ]; then \
+#     rustup target add x86_64-unknown-linux-musl; \
+#     else \
+#     rustup target add aarch64-unknown-linux-musl; \
+#     fi \
+#     && cargo install cargo-chef
+# WORKDIR /app
+#
+# FROM chef AS planner
+# COPY . .
+# WORKDIR /app/sam-e-invoker
+# RUN cargo chef prepare --recipe-path recipe.json
+#
+# FROM chef AS builder
+# COPY --from=planner /app/sam-e-invoker/recipe.json /app/sam-e-invoker/recipe.json
+# COPY ./sam-e-types /app/sam-e-types
+# WORKDIR /app/sam-e-invoker
+# RUN if [ "${TARGETPLATFORM#*linux/}" = "amd64" ]; then \
+#     cargo chef cook --target x86_64-unknown-linux-musl --recipe-path recipe.json; \
+#     else \
+#     cargo chef cook --target aarch64-unknown-linux-musl --recipe-path recipe.json; \
+#     fi
+# COPY . .
+# RUN if [ "${TARGETPLATFORM#*linux/}" = "amd64" ]; then \
+#     cargo build --target x86_64-unknown-linux-musl; \
+#     mv target/x86_64-unknown-linux-musl/debug/app /usr/local/app; \
+#     else \
+#     cargo build --target aarch64-unknown-linux-musl; \
+#     mv target/aarch64-unknown-linux-musl/debug/app /usr/local/app; \
+#     fi
+#
+# # Final
+# FROM debian:11-slim AS runtime
+#
+# RUN apt-get update && apt-get install -y \
+#     ca-certificates \
+#     wget \
+#     && rm -rf /var/lib/apt/lists/*
+#
+# COPY --from=builder /usr/local/app /usr/local/bin/app
+#
+# ENTRYPOINT ["/usr/local/bin/app"]
