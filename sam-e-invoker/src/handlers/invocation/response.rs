@@ -3,6 +3,7 @@ use crate::data::store::{EventSource, InvocationQueue, ResponseType, Status};
 use aws_lambda_events::apigw::ApiGatewayProxyResponse;
 use axum::{
     body::Bytes,
+    debug_handler,
     extract::{Path, State},
     http::{HeaderMap, StatusCode},
     response::IntoResponse,
@@ -13,6 +14,7 @@ use uuid::Uuid;
 
 use crate::data::api::ApiState;
 
+#[debug_handler]
 pub async fn response_handler(
     headers: HeaderMap,
     Path((container_name, request_id)): Path<(String, Uuid)>,
@@ -57,17 +59,14 @@ pub async fn response_handler(
 
             match invocation.get_event_source() {
                 EventSource::Api => {
+                    debug!("Detected event source as API");
                     let response_data: ApiGatewayProxyResponse =
                         serde_json::from_slice(&body).unwrap();
                     invocation.set_response(ResponseType::Api(response_data));
                 }
                 EventSource::Sqs => {
-                    // let response_data: ApiGatewayProxyResponse =
-                    //     serde_json::from_slice(&body).unwrap();
-                    // invocation.set_response(ResponseType::Sqs(response_data));
-
-                    debug!("SQS response not yet implemented");
-                    // TODO: remove the processed messages from the queue...
+                    debug!("Detected event source as SQS");
+                    // TODO: delete the message on success: currently happens on invocation
                 }
             }
 

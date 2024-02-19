@@ -3,7 +3,6 @@ use crate::data::{
     store::{InvocationQueue, RequestType, Status},
 };
 
-use aws_lambda_events::apigw::ApiGatewayProxyRequest;
 use axum::{
     extract::{Path, State},
     http::StatusCode,

@@ -16,7 +16,7 @@ pub struct ApiState {
 }
 
 impl ApiState {
-    pub fn new(config: &Config) -> Self {
+    pub async fn new(config: &Config) -> Self {
         let sam_routes = create_routes(config);
 
         if let Some(sam_routes) = &sam_routes {
@@ -25,7 +25,7 @@ impl ApiState {
         }
 
         Self {
-            invocation_store: Store::new(&sam_routes),
+            invocation_store: Store::new(&sam_routes).await,
             sam_routes,
         }
         // if let Ok(sam_routes) = sam_routes {

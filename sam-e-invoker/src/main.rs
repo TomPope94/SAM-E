@@ -34,8 +34,13 @@ async fn main() -> anyhow::Result<()> {
     let config_env_string = env::var("CONFIG").expect("CONFIG env variable not found");
     let config: Config = serde_yaml::from_str(&config_env_string)?;
 
-    let api_state = ApiState::new(&config);
+    let api_state = ApiState::new(&config).await;
     let cloned_store = api_state.get_store().clone();
+
+    tokio::spawn(async move {
+        info!("Starting polling queues for messages");
+        queues::listen_to_queues(config, cloned_store).await;
+    });
 
     info!("Setting up invocation endpoints for Lambda runtime API");
 
@@ -72,11 +77,6 @@ async fn main() -> anyhow::Result<()> {
         )
         .layer(middleware::cors_layer())
         .with_state(api_state);
-
-    tokio::spawn(async move {
-        info!("Starting polling queues for messages");
-        queues::listen_to_queues(&config, cloned_store).await;
-    });
 
     let listener = tokio::net::TcpListener::bind("0.0.0.0:3000").await.unwrap();
     info!("listening on {}", listener.local_addr().unwrap());
