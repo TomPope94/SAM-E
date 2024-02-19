@@ -1,16 +1,12 @@
-use lambda_http::{service_fn, Error, IntoResponse, Request, RequestExt, Response};
-use aws_lambda_events::event::apigw::ApiGatewayProxyResponse;
+use lambda_http::{service_fn, Error, IntoResponse, Request, Response};
 use tracing::info;
+use tracing_subscriber::EnvFilter;
 
-async fn handler(event: Request) -> Result<impl IntoResponse, Error> {
+async fn handler(_event: Request) -> Result<impl IntoResponse, Error> {
     let resp: lambda_http::Response<String> = Response::builder()
         .status(200)
-        // .header("content-type", "application/json")
         .header("content-type", "text/html")
         .body("Hello AWS Lambda HTTP request".into())
-        // .body(serde_json::json!({
-        //     "message": "Hello AWS Lambda HTTP request",
-        // }).to_string().into())
         .map_err(Box::new)?;
 
     info!("Response: {:#?}", resp);
@@ -22,7 +18,7 @@ async fn handler(event: Request) -> Result<impl IntoResponse, Error> {
 async fn main() -> Result<(), Error> {
     // required to enable CloudWatch error logging by the runtime
     tracing_subscriber::fmt()
-        .with_max_level(tracing::Level::TRACE)
+        .with_env_filter(EnvFilter::from_default_env())
         // disable printing the name of the module in every log line.
         // .with_target(false)
         // disabling time is handy because CloudWatch will add the ingestion time.

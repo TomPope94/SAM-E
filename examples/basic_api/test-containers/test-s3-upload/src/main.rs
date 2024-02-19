@@ -1,15 +1,12 @@
 use aws_config::{profile::ProfileFileCredentialsProvider, BehaviorVersion};
 use aws_sdk_s3::{config::Region, Client};
-use aws_lambda_events::{event::sqs::SqsEvent, sqs::SqsEventObj};
+use aws_lambda_events::event::sqs::SqsEvent;
 
 use lambda_runtime::{run, service_fn, Error, LambdaEvent};
-use serde::{Deserialize, Serialize};
-use serde_json::Value;
 
-use tracing::{debug, info};
+use tracing::info;
 use tracing_subscriber::EnvFilter;
 
-use std::fs;
 
 #[tokio::main]
 async fn main() -> Result<(), Error> {
@@ -34,13 +31,13 @@ async fn main() -> Result<(), Error> {
         .load()
         .await;
 
-    let client = Client::new(&config);
+    let _client = Client::new(&config);
 
     run(service_fn(function_handler)).await
 }
 
 async fn function_handler(event: LambdaEvent<SqsEvent>) -> Result<(), Error> {
-    debug!("Received event: {:?}", event);
+    info!("Received event: {:?}", event);
 
     Ok(())
 }

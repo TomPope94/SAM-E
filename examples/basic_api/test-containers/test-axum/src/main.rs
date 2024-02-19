@@ -18,11 +18,11 @@ use lambda_http::{
     Error,
 };
 use serde_json::{json, Value};
-use std::env::set_var;
 use tracing::{error, info};
+use tracing_subscriber::EnvFilter;
 
 use aws_config::{
-    meta::region::RegionProviderChain, profile::ProfileFileCredentialsProvider, retry::RetryConfig,
+    profile::ProfileFileCredentialsProvider, 
     BehaviorVersion,
 };
 use aws_sdk_sqs::{config::Region, Client};
@@ -114,7 +114,7 @@ async fn context_mw(req: axum::extract::Request, next: axum::middleware::Next) -
 async fn main() -> Result<(), Error> {
     // required to enable CloudWatch error logging by the runtime
     tracing_subscriber::fmt()
-        .with_max_level(tracing::Level::TRACE)
+        .with_env_filter(EnvFilter::from_default_env())
         // disable printing the name of the module in every log line.
         // .with_target(false)
         // disabling time is handy because CloudWatch will add the ingestion time.
