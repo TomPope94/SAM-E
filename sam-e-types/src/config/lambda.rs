@@ -50,7 +50,6 @@ impl Lambda {
     }
 }
 
-
 /// The types of events that can trigger a Lambda
 #[derive(Debug, Deserialize, Serialize, Clone, Eq, PartialEq)]
 pub enum EventType {

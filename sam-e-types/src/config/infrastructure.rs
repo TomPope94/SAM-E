@@ -5,8 +5,7 @@ use serde::{Deserialize, Serialize};
 pub struct Infrastructure {
     name: String,
     infrastructure_type: InfrastructureType,
-    lambda_triggers: Vec<String>,
-    queue_url: Option<String>, // TODO this should be a separate type for SQS
+    triggers: Option<Triggers>,
 }
 
 impl Infrastructure {
@@ -14,8 +13,7 @@ impl Infrastructure {
         Self {
             name,
             infrastructure_type,
-            lambda_triggers: Vec::new(),
-            queue_url: None,
+            triggers: None,
         }
     }
 
@@ -27,24 +25,16 @@ impl Infrastructure {
         &self.infrastructure_type
     }
 
-    pub fn get_lambda_triggers(&self) -> &Vec<String> {
-        &self.lambda_triggers
+    pub fn get_triggers(&self) -> &Option<Triggers> {
+        &self.triggers
     }
 
-    pub fn set_lambda_triggers(&mut self, lambda_triggers: Vec<String>) {
-        self.lambda_triggers = lambda_triggers;
+    pub fn get_mut_triggers(&mut self) -> &mut Option<Triggers> {
+        &mut self.triggers
     }
 
-    pub fn add_lambda_trigger(&mut self, lambda_trigger: String) {
-        self.lambda_triggers.push(lambda_trigger);
-    }
-
-    pub fn set_queue_url(&mut self, queue_url: String) {
-        self.queue_url = Some(queue_url);
-    }
-
-    pub fn get_queue_url(&self) -> Option<&String> {
-        self.queue_url.as_ref()
+    pub fn set_triggers(&mut self, triggers: Triggers) {
+        self.triggers = Some(triggers);
     }
 }
 
@@ -53,6 +43,52 @@ pub enum InfrastructureType {
     Sqs,
     Postgres,
     Mysql,
-    S3
+    S3,
 }
 
+#[derive(Debug, Deserialize, Serialize, Clone)]
+pub struct Triggers {
+    lambdas: Option<Vec<String>>,
+    queues: Option<Vec<String>>,
+}
+
+impl Triggers {
+    pub fn new() -> Self {
+        Self {
+            lambdas: None,
+            queues: None,
+        }
+    }
+
+    pub fn get_lambdas(&self) -> &Option<Vec<String>> {
+        &self.lambdas
+    }
+
+    pub fn add_lambda(&mut self, lambda: String) {
+        if let Some(lambdas) = &mut self.lambdas {
+            lambdas.push(lambda);
+        } else {
+            self.lambdas = Some(vec![lambda]);
+        }
+    }
+
+    pub fn set_lambdas(&mut self, lambdas: Vec<String>) {
+        self.lambdas = Some(lambdas);
+    }
+
+    pub fn get_queues(&self) -> &Option<Vec<String>> {
+        &self.queues
+    }
+
+    pub fn add_queue(&mut self, queue: String) {
+        if let Some(queues) = &mut self.queues {
+            queues.push(queue);
+        } else {
+            self.queues = Some(vec![queue]);
+        }
+    }
+
+    pub fn set_queues(&mut self, queues: Vec<String>) {
+        self.queues = Some(queues);
+    }
+}
