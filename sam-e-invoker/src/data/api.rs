@@ -4,8 +4,6 @@ use sam_e_types::config::{
     lambda::EventType, Config, Infrastructure, Lambda
 };
 
-use fancy_regex::Regex;
-
 #[derive(Debug, Clone)]
 pub struct ApiState {
     pub invocation_store: Store,
@@ -36,34 +34,8 @@ impl ApiState {
     pub fn get_store(&self) -> &Store {
         &self.invocation_store
     }
-}
 
-#[derive(Debug, Clone)]
-pub struct Route {
-    pub route: String,
-    pub method: String,
-    pub container_name: String,
-    pub route_regex: Regex,
-    pub route_base_path: Option<String>,
-}
-
-impl Route {
-    pub fn create(
-        route: String,
-        method: String,
-        container_name: String,
-        route_regex: Regex,
-        route_base_path: Option<String>,
-    ) -> Self {
-        Route {
-            route,
-            method,
-            container_name,
-            route_regex,
-            route_base_path,
-        }
-    }
-    pub fn get_route_base_path(&self) -> Option<&str> {
-        self.route_base_path.as_deref()
+    pub fn get_infrastructure(&self) -> &Vec<Infrastructure> {
+        &self.infrastructure
     }
 }

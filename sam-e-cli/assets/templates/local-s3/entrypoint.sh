@@ -9,6 +9,7 @@ minio server /buckets & \
   {%- for infra in infrastructure %}
     {%- if infra.infrastructure_type == "S3" %}
   mc mb local/{{infra.name}}; \
+  mc anonymous set public local/{{infra.name}}; \
   mc event add local/{{infra.name}} arn:minio:sqs::LOCAL:webhook --event put,get,delete; \
     {%- endif %}
   {%- endfor %}

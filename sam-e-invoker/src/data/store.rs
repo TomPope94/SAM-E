@@ -190,4 +190,8 @@ impl Store {
             sqs_client,
         }
     }
+
+    pub fn get_sqs_client(&self) -> &Client {
+        &self.sqs_client
+    }
 }

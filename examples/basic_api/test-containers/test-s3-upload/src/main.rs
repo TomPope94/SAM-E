@@ -34,7 +34,6 @@ async fn function_handler(event: LambdaEvent<SqsEvent>) -> Result<(), Error> {
         .region(region)
         .force_path_style(true)
         .endpoint_url("http://s3-local:9000")
-        // .credentials_provider(ProfileFileCredentialsProvider::builder().profile_name("staging-mfa").build())
         .build();
 
     let client = Client::from_conf(raw_config);
@@ -53,7 +52,7 @@ async fn function_handler(event: LambdaEvent<SqsEvent>) -> Result<(), Error> {
             debug!("Uploading file to S3: {}", file_name);
             let _response = client
                 .put_object()
-                .bucket("test-bucket-001")
+                .bucket("test-bucket-002")
                 .key(&file_name)
                 .body(file_bytes.into())
                 .send()

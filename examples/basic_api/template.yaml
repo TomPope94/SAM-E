@@ -130,7 +130,7 @@ Resources:
     Type: "AWS::S3::Bucket"
     Properties:
       # BucketName: !Sub "${EnvironmentName}-test-bucket"
-      BucketName: todo-dynamic-name-bucket
+      BucketName: test-bucket-002
       AccessControl: Private
       PublicAccessBlockConfiguration:
         BlockPublicAcls: true
