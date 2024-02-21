@@ -1,5 +1,8 @@
+use crate::config::{
+    infrastructure::{Infrastructure, Triggers},
+    lambda::{EventProperties, EventType, Lambda},
+};
 use serde::{Deserialize, Serialize};
-use crate::config::{Infrastructure, lambda::{Lambda, EventType, EventProperties}};
 
 /// The overall config construct for the SAM-E environment
 /// Will be used to drive the local runtime and the deployment process
@@ -31,12 +34,20 @@ impl Config {
                 match event.get_event_type() {
                     EventType::Sqs => {
                         let queue_name = match event.get_properties() {
-                            Some(EventProperties::Sqs(sqs_properties)) => sqs_properties.get_queue().clone(),
+                            Some(EventProperties::Sqs(sqs_properties)) => {
+                                sqs_properties.get_queue().clone()
+                            }
                             _ => String::new(),
                         };
                         for infrastructure in self.infrastructure.iter_mut() {
                             if infrastructure.get_name() == queue_name {
-                                infrastructure.add_lambda_trigger(lambda.get_name().to_string());
+                                if let Some(triggers) = infrastructure.get_mut_triggers() {
+                                    triggers.add_lambda(lambda.get_name().to_string());
+                                } else {
+                                    let mut triggers = Triggers::new();
+                                    triggers.add_lambda(lambda.get_name().to_string());
+                                    infrastructure.set_triggers(triggers);
+                                }
                             }
                         }
                     }
@@ -78,4 +89,3 @@ impl Runtime {
         Self { port }
     }
 }
-

@@ -13,9 +13,17 @@ async fn main() -> anyhow::Result<()> {
     let args = data::Cli::parse();
 
     if args.verbose {
-        env::set_var("RUST_LOG", "trace");
+        env::set_var("RUST_LOG", "debug");
     } else {
         env::set_var("RUST_LOG", "info");
+    }
+
+    if args.quiet {
+        env::set_var("RUST_LOG", "error");
+    }
+
+    if args.trace {
+        env::set_var("RUST_LOG", "trace");
     }
 
     tracing_subscriber::fmt()

@@ -127,12 +127,16 @@ services:
       - 9000:9000
       - 9001:9001
     environment:
-      - MINIO_ROOT_USER=user
-      - MINIO_ROOT_PASSWORD=password
+      - MINIO_ROOT_USER=minioadmin
+      - MINIO_ROOT_PASSWORD=minioadmin
+      - MINIO_NOTIFY_WEBHOOK_ENABLE_LOCAL=on
+      - MINIO_NOTIFY_WEBHOOK_ENDPOINT_LOCAL=http://sam-e-invoker:3000/webhook/s3
     networks:
       - development
+    depends_on:
+      - sam-e-invoker
     volumes:
-      - s3-local:/mnt/data
+      - ./local-s3/minio:/data
 {%- endif %}
 {%- endfor %}
 

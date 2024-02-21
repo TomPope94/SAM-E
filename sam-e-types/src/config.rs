@@ -1,7 +1,7 @@
 pub mod config;
-pub mod lambda;
 pub mod infrastructure;
+pub mod lambda;
 
 pub use config::Config;
-pub use lambda::Lambda;
 pub use infrastructure::Infrastructure;
+pub use lambda::Lambda;

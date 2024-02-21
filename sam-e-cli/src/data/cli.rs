@@ -7,6 +7,14 @@ pub struct Cli {
     #[arg(short, long, global = true)]
     pub verbose: bool,
 
+    /// A flag to enable quiet logging
+    #[arg(short, long, global = true)]
+    pub quiet: bool,
+
+    /// A flag to enable trace logging
+    #[arg(short, long, global = true)]
+    pub trace: bool,
+
     /// Specify what action you would like SAM-E to perform
     #[clap(subcommand)]
     pub command: Command,

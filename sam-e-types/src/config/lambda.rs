@@ -1,5 +1,6 @@
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
+use fancy_regex::Regex;
 
 /// A Lambda function as specified in the SAM template - will be created as a separate container
 #[derive(Debug, Deserialize, Serialize, Clone)]
@@ -50,7 +51,6 @@ impl Lambda {
     }
 }
 
-
 /// The types of events that can trigger a Lambda
 #[derive(Debug, Deserialize, Serialize, Clone, Eq, PartialEq)]
 pub enum EventType {
@@ -62,8 +62,10 @@ pub enum EventType {
 #[derive(Debug, Deserialize, Serialize, Clone)]
 pub struct EventApiProperties {
     path: String,
+    #[serde(skip_serializing_if = "Option::is_none")]
     base_path: Option<String>,
     method: String,
+    route_regex: String,
 }
 
 impl EventApiProperties {
@@ -77,6 +79,10 @@ impl EventApiProperties {
 
     pub fn get_method(&self) -> &String {
         &self.method
+    }
+
+    pub fn get_route_regex(&self) -> Regex {
+        Regex::new(&self.route_regex).expect("invalid regex")
     }
 }
 
@@ -103,6 +109,7 @@ pub enum EventProperties {
 #[derive(Debug, Deserialize, Serialize, Clone)]
 pub struct Event {
     event_type: EventType,
+    #[serde(skip_serializing_if = "Option::is_none")]
     properties: Option<EventProperties>,
 }
 
@@ -115,6 +122,7 @@ impl Event {
                     base_path: None,
                     path: String::new(),
                     method: String::new(),
+                    route_regex: String::new(),
                 })),
             },
             EventType::Sqs => Self {
@@ -129,11 +137,22 @@ impl Event {
     pub fn set_api_properties(&mut self, path: String, base_path: Option<String>, method: String) {
         match &mut self.properties {
             Some(EventProperties::Api(api_properties)) => {
+                let replaced_path = replaced_regex_path(&path, &base_path);
+                let route_regex = Regex::new(&replaced_path).expect("invalid regex");
+
                 api_properties.base_path = base_path;
                 api_properties.path = path;
                 api_properties.method = method;
+                api_properties.route_regex = route_regex.to_string();
             }
             _ => {}
+        }
+    }
+
+    pub fn get_api_properties(&self) -> Option<&EventApiProperties> {
+        match &self.properties {
+            Some(EventProperties::Api(api_properties)) => Some(api_properties),
+            _ => None,
         }
     }
 
@@ -159,5 +178,42 @@ impl Event {
 
     pub fn get_properties(&self) -> Option<&EventProperties> {
         self.properties.as_ref()
+    }
+}
+
+fn replaced_regex_path(path: &str, base_path: &Option<String>) -> String {
+    // As SAM supports parameters in url with {param} syntax we need to replace them with usable regex
+    let replace_matches: Regex = Regex::new("{.*?}").expect("invalid regex");
+
+    let replaced_sam_path =
+        replace_matches
+            .find_iter(path)
+            .fold(path.to_string(), |mut acc, current_match| {
+                if let Ok(current_match) = current_match {
+                    let current_match_name: &str =
+                        &current_match.as_str()[1..current_match.as_str().len() - 1];
+
+                    if current_match_name.ends_with('+') {
+                        acc = acc.replace(
+                            current_match.as_str(),
+                            &format!(
+                                r"(?P<{}>.*)",
+                                &current_match_name[0..current_match_name.len() - 1]
+                            ),
+                        );
+                    } else {
+                        acc = acc.replace(
+                            current_match.as_str(),
+                            &format!(r"(?P<{}>[^\/]+)", &current_match_name),
+                        );
+                    }
+                };
+                acc
+            });
+
+    if let Some(base_path) = base_path {
+        format!("^/{}{}$", base_path, replaced_sam_path)
+    } else {
+        format!("^{}$", replaced_sam_path)
     }
 }
