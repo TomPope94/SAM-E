@@ -112,6 +112,14 @@ Resources:
     Properties:
       BucketName: test-bucket-001
       AccessControl: Private
+      NotificationConfiguration:
+        QueueConfigurations:
+          - Event: s3:ObjectCreated:Put
+            Queue: TestDeliverySQS
+            # Queue: !GetAtt TestDeliverySQS.Arn
+        # LambdaConfigurations:
+        #   - Event: s3:ObjectCreated:Put
+        #     Function: !GetAtt TODOLambda
       PublicAccessBlockConfiguration:
         BlockPublicAcls: true
         IgnorePublicAcls: true
