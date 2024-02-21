@@ -85,29 +85,31 @@ pub async fn poll_queue_for_invoke(queue: Infrastructure, store: Store) {
                                 invocation.set_request(RequestType::Sqs(sqs_event));
                                 invocation.set_sqs_queue_url(url.to_string());
 
-                                for container in container_names {
-                                    debug!("Adding SQS invocation for container: {}", container);
-                                    let _ = write_invocation_to_store(
-                                        invocation.clone(),
-                                        container,
-                                        &store,
-                                    );
-                                }
+                                if let Some(container_names) = container_names {
+                                    for container in container_names {
+                                        debug!("Adding SQS invocation for container: {}", container);
+                                        let _ = write_invocation_to_store(
+                                            invocation.clone(),
+                                            container,
+                                            &store,
+                                        );
+                                    }
 
-                                for message in formatted_messages {
-                                    let delete_message = client
-                                        .delete_message()
-                                        .queue_url(url)
-                                        .receipt_handle(message.receipt_handle.unwrap())
-                                        .send()
-                                        .await;
+                                    for message in formatted_messages {
+                                        let delete_message = client
+                                            .delete_message()
+                                            .queue_url(url)
+                                            .receipt_handle(message.receipt_handle.unwrap())
+                                            .send()
+                                            .await;
 
-                                    match delete_message {
-                                        Ok(_) => {
-                                            debug!("Successfully deleted message from SQS queue");
-                                        }
-                                        Err(e) => {
-                                            error!("Failed to delete message from SQS queue: {}", e);
+                                        match delete_message {
+                                            Ok(_) => {
+                                                debug!("Successfully deleted message from SQS queue");
+                                            }
+                                            Err(e) => {
+                                                error!("Failed to delete message from SQS queue: {}", e);
+                                            }
                                         }
                                     }
                                 }

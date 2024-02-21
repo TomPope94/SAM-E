@@ -1,10 +1,9 @@
 use std::collections::HashMap;
 
-use crate::data::{
-    api::Route,
-    store::{Invocation, InvocationQueue, Status, Store},
-};
+use crate::data::store::{Invocation, InvocationQueue, Status, Store};
+use sam_e_types::config::{lambda::{EventProperties, EventType, Event}, Lambda};
 
+use anyhow::Result;
 use aws_lambda_events::apigw::{
     ApiGatewayProxyRequest, ApiGatewayProxyRequestContext, ApiGatewayRequestIdentity,
 };
@@ -97,8 +96,8 @@ pub async fn read_invocation_from_store(
     processed_invocation.unwrap()
 }
 
-fn remove_base_path(path: &str, base_path: Option<&str>) -> String {
-    if let Some(base_path) = base_path {
+fn remove_base_path(path: &str, base_path: &Option<&String>) -> String {
+    if let Some(base_path) = base_path.to_owned() {
         let base_path_with_slash = if base_path.ends_with('/') {
             base_path.to_owned()
         } else {
@@ -110,21 +109,34 @@ fn remove_base_path(path: &str, base_path: Option<&str>) -> String {
     }
 }
 
-pub fn find_matched_route(routes: Vec<Route>, method: &str, prepended_path: &str) -> Option<Route> {
-    let matched_route = routes.into_iter().find(|route| {
-        let route_filter = if let Ok(route_match) = route.route_regex.is_match(&prepended_path) {
-            route_match
-        } else {
-            false
-        };
+pub fn find_matched_lambda(lambdas: &Vec<&Lambda>, method: &str, prepended_path: &str) -> Result<(Lambda, Event)> {
+    for lambda in lambdas {
+        for event in lambda.get_events() {
+            if let EventType::Api = event.get_event_type() {
+                if let Some(props) = event.get_properties() {
+                    match props {
+                        EventProperties::Api(api_props) => {
+                            let route_filter = if let Ok(route_match) = api_props.get_route_regex().is_match(&prepended_path) {
+                                route_match
+                            } else {
+                                false
+                            };
 
-        let method_filter =
-            ["ANY", &method.to_uppercase()].contains(&route.method.to_uppercase().as_str());
+                            let method_filter =
+                                ["ANY", &method.to_uppercase()].contains(&api_props.get_method().to_uppercase().as_str());
 
-        route_filter && method_filter
-    });
+                            if route_filter && method_filter {
+                                return Ok((lambda.to_owned().clone(), event.to_owned()));
+                            }
+                        }
+                        _ => {}
+                    }
+                }
+            }
+        }
+    }
 
-    matched_route
+    Err(anyhow::anyhow!("No matching Lambda found"))
 }
 
 pub fn create_api_request(
@@ -133,7 +145,7 @@ pub fn create_api_request(
     params: HashMap<String, String>,
     method: Method,
     path: &str,
-    base_path: Option<&str>,
+    base_path: &Option<&String>,
     request_id: &Uuid,
 ) -> ApiGatewayProxyRequest {
     debug!("Creating API Gateway request");

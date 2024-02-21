@@ -14,6 +14,7 @@ use data::api::ApiState;
 use handlers::{
     client::{queues, request},
     invocation::{init_error, invocation_error, next, response},
+    webhook::s3,
 };
 
 use sam_e_types::config::Config;
@@ -53,6 +54,9 @@ async fn main() -> anyhow::Result<()> {
         )
         .route_layer(axum::middleware::from_fn(middleware::headers_mw));
 
+    let webhook_routes = Router::new()
+        .route("/s3", post(s3::handler))
+        .route_layer(axum::middleware::from_fn(middleware::headers_mw));
     // build our application with a route
     let app = Router::new()
         .nest(
@@ -75,6 +79,7 @@ async fn main() -> anyhow::Result<()> {
                 .delete(request::request_handler)
                 .patch(request::request_handler),
         )
+        .nest("/webhook", webhook_routes)
         .layer(middleware::cors_layer())
         .with_state(api_state);
 

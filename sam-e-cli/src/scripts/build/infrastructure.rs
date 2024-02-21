@@ -3,11 +3,11 @@ use sam_e_types::config::{
     Config,
 };
 
-use anyhow::Error;
+use anyhow::{Error, Result};
 use rust_embed::RustEmbed;
 use std::{collections::HashMap, fs};
 use tera::{Context, Tera};
-use tracing::{error, info, trace};
+use tracing::{debug, error, info, trace, warn};
 
 const SAM_E_DIRECTORY: &str = ".sam-e";
 
@@ -21,7 +21,7 @@ struct Asset;
 /// TODO: Should have a more generic approach to this, currently only supports RDS, S3, and SQS
 pub fn get_infrastructure_from_resources(
     resources: &HashMap<String, serde_yaml::Value>,
-) -> Vec<Infrastructure> {
+) -> Result<Vec<Infrastructure>> {
     let mut infrastructure = vec![];
 
     for (resource_name, resource) in resources.iter() {
@@ -63,19 +63,58 @@ pub fn get_infrastructure_from_resources(
             if resource_type == "AWS::S3::Bucket" {
                 trace!("Found a bucket!");
 
-                if let Some(bucket_name) = resource["Properties"].get("BucketName") {
-                    infrastructure.push(Infrastructure::new(
-                        bucket_name.as_str().unwrap().to_string(),
-                        InfrastructureType::S3,
-                    ));
-                } else {
-                    error!("No bucket name provided for S3 bucket: {}", resource_name);
-                }
+                infrastructure.push(create_infrastructure_from_s3_resource(&resource)?);
             }
         }
     }
 
-    infrastructure
+    Ok(infrastructure)
+}
+
+/// Creates an infrastructure object from the S3 resource. This is done by checking the properties
+/// and adding the bucket name to the infrastructure object. If there are any queue configurations
+/// they are also added to the triggers of the infrastructure object. Will return an error if the
+/// template yaml is not formatted correctly.
+fn create_infrastructure_from_s3_resource(resource: &serde_yaml::Value) -> Result<Infrastructure> {
+    if let Some(bucket_name) = resource["Properties"].get("BucketName") {
+        if let Some(bucket_name) = bucket_name.as_str() {
+            debug!("Found bucket name for S3 bucket: {}", bucket_name);
+            let mut new_infrastructure =
+                Infrastructure::new(bucket_name.to_string(), InfrastructureType::S3);
+
+            if let Some(notification_configuration) =
+                resource["Properties"].get("NotificationConfiguration")
+            {
+                if let Some(queue_config) = notification_configuration.get("QueueConfigurations") {
+                    debug!(
+                        "Found queue configurations for S3 bucket: {}",
+                        bucket_name.to_string()
+                    );
+                    if let Some(queue_config) = queue_config.as_sequence() {
+                        for queue in queue_config {
+                            debug!("Found queue {:?}", queue);
+                            new_infrastructure.add_queue_to_triggers(
+                                queue["Queue"].as_str().unwrap().to_string(),
+                            );
+                        }
+                    }
+                }
+            } else {
+                warn!(
+                    "No notification configurations found for S3 bucket: {}",
+                    bucket_name.to_string()
+                );
+            }
+
+            Ok(new_infrastructure)
+        } else {
+            Err(Error::msg("Bucket name is not a string"))
+        }
+    } else {
+        Err(Error::msg(
+            "No bucket name provided for S3 bucket. Please fix this in your template.yaml file",
+        ))
+    }
 }
 
 /// Creates the infrastructure files required for the local environment. This includes the

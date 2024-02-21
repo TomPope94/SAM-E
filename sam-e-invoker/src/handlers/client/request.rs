@@ -4,7 +4,7 @@ use crate::{
         store::{EventSource, Invocation, RequestType, ResponseType},
     },
     handlers::client::utils::{
-        create_api_request, find_matched_route, read_invocation_from_store,
+        create_api_request, find_matched_lambda, read_invocation_from_store,
         write_invocation_to_store,
     },
 };
@@ -27,24 +27,25 @@ pub async fn request_handler(
     State(api_state): State<ApiState>,
     body: Option<Json<serde_json::Value>>,
 ) -> impl IntoResponse {
-    let routes = api_state.get_routes_vec();
-    if routes.is_none() {
-        debug!("No routes detected.");
-        return "No routes detected".into_response();
-    }
+    let api_lambdas = api_state.get_api_lambdas();
 
-    debug!("Routes detected. Checking for route match");
+    if api_lambdas.is_empty() {
+        debug!("No API lambdas detected from SAM template.");
+        return "No API lambdas detected from SAM template.".into_response();
+    }
 
     let prepended_path = format!("/{}", path); // Axum doesn't prepend the path with a slash
-    let matched_route = find_matched_route(routes.unwrap(), &method.to_string(), &prepended_path);
-
-    if matched_route.is_none() {
-        debug!("No route match found");
-        return "No route match found".into_response();
+    
+    let matched_lambda_and_event = find_matched_lambda(&api_lambdas, &method.to_string(), &prepended_path);
+    if matched_lambda_and_event.is_err() {
+        error!("No matching Lambda found");
+        return "No matching Lambda found".into_response();
     }
 
-    let matched_route_unwrapped = matched_route.unwrap();
-    debug!("Route match found: {:?}", matched_route_unwrapped);
+    let (matched_lambda, matched_props) = matched_lambda_and_event.unwrap();
+    let matched_api_props = matched_props.get_api_properties().unwrap().to_owned();
+
+    debug!("Event lambda found: {:?}", &matched_lambda);
     debug!("Now adding invocation to store");
 
     // Creates an empty invocation with default empty request and response of correct type
@@ -58,7 +59,7 @@ pub async fn request_handler(
         params,
         method,
         &prepended_path,
-        matched_route_unwrapped.get_route_base_path(),
+        &matched_api_props.get_base_path(),
         &request_id,
     );
     new_invocation.set_request(RequestType::Api(api_data));
@@ -67,13 +68,13 @@ pub async fn request_handler(
     // runtime api
     let _ = write_invocation_to_store(
         new_invocation,
-        &matched_route_unwrapped.container_name,
+        matched_lambda.get_name(),
         api_state.get_store(),
     );
 
     let processed_invocation = read_invocation_from_store(
         api_state.get_store(),
-        &matched_route_unwrapped.container_name,
+        matched_lambda.get_name(),
         request_id,
     )
     .await;
@@ -111,7 +112,7 @@ pub async fn request_handler(
                         } else {
                             text.clone().into_response()
                         }
-                    }
+                    },
                     encodings::Body::Binary(binary) => binary.clone().into_response(),
                     encodings::Body::Empty => "No Response body found".into_response(),
                 }

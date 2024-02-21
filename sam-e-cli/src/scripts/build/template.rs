@@ -4,8 +4,8 @@ use std::{
     path::{Path, PathBuf},
 };
 
-use anyhow::Error;
-use serde_yaml::Value;
+use anyhow::{Error, Result};
+use serde_yaml::{value::TaggedValue, Value};
 use tracing::{debug, trace, warn};
 
 /// Gets the raw CloudFormation template file from directory and returns resources specified as
@@ -91,3 +91,19 @@ fn find_all_files(path: &impl AsRef<Path>, filename: &str) -> std::io::Result<Ve
 
     Ok(buf)
 }
+
+// Takes a yaml value and returns a string. If the value is a reference using a yaml tag (i.e.
+// !Ref) it will return a string of what's being referenced. If it's already a string it will
+// simply return that. Anything else will error.
+// pub fn handle_value_reference(reference: &Value) -> Result<String> {
+//     match reference {
+//         Value::String(s) => Ok(s.to_string()),
+//         Value::Tagged(tagged_value) => handle_yaml_tag(tagged_value.to_owned()),
+//         _ => Err(Error::msg("Value is not a string or reference")),
+//     }
+// }
+//
+// fn handle_yaml_tag(value: TaggedValue) -> Result<String> {
+//     if value.tag() == "!GetAtt"
+//
+// }

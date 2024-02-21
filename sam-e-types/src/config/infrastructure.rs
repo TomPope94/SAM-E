@@ -5,7 +5,10 @@ use serde::{Deserialize, Serialize};
 pub struct Infrastructure {
     name: String,
     infrastructure_type: InfrastructureType,
+    #[serde(skip_serializing_if = "Option::is_none")]
     triggers: Option<Triggers>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    queue_url: Option<String>,
 }
 
 impl Infrastructure {
@@ -14,6 +17,7 @@ impl Infrastructure {
             name,
             infrastructure_type,
             triggers: None,
+            queue_url: None,
         }
     }
 
@@ -36,6 +40,42 @@ impl Infrastructure {
     pub fn set_triggers(&mut self, triggers: Triggers) {
         self.triggers = Some(triggers);
     }
+
+    pub fn get_lambda_triggers(&self) -> &Option<Vec<String>> {
+        if let Some(triggers) = &self.triggers {
+            triggers.get_lambdas()
+        } else {
+            &None
+        }
+    }
+
+    pub fn add_lambda_to_triggers(&mut self, lambda: String) {
+        if let Some(triggers) = &mut self.triggers {
+            triggers.add_lambda(lambda);
+        } else {
+            let mut new_triggers = Triggers::new();
+            new_triggers.add_lambda(lambda);
+            self.triggers = Some(new_triggers);
+        }
+    }
+
+    pub fn add_queue_to_triggers(&mut self, queue: String) {
+        if let Some(triggers) = &mut self.triggers {
+            triggers.add_queue(queue);
+        } else {
+            let mut new_triggers = Triggers::new();
+            new_triggers.add_queue(queue);
+            self.triggers = Some(new_triggers);
+        }
+    }
+
+    pub fn get_queue_url(&self) -> &Option<String> {
+        &self.queue_url
+    }
+
+    pub fn set_queue_url(&mut self, url: String) {
+        self.queue_url = Some(url);
+    }
 }
 
 #[derive(Debug, Deserialize, Serialize, Clone, Eq, PartialEq)]
@@ -48,7 +88,9 @@ pub enum InfrastructureType {
 
 #[derive(Debug, Deserialize, Serialize, Clone)]
 pub struct Triggers {
+    #[serde(skip_serializing_if = "Option::is_none")]
     lambdas: Option<Vec<String>>,
+    #[serde(skip_serializing_if = "Option::is_none")]
     queues: Option<Vec<String>>,
 }
 

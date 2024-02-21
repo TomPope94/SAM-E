@@ -8,11 +8,10 @@ use aws_lambda_events::{
 use aws_sdk_sqs::{config::Region, Client};
 use chrono::{DateTime, Local};
 use parking_lot::RwLock;
+use sam_e_types::config::Lambda;
 use serde::{Deserialize, Serialize};
 use tracing::debug;
 use uuid::Uuid;
-
-use super::api::Route;
 
 #[derive(Debug, Deserialize, Serialize, Clone, Copy, PartialEq, Eq)]
 pub enum Status {
@@ -163,12 +162,11 @@ pub struct Store {
 }
 
 impl Store {
-    pub async fn new(sam_routes: &Option<HashMap<String, Route>>) -> Self {
-        let mut queues = HashMap::new();
-        if let Some(routes) = sam_routes {
-            for route in routes.values() {
-                queues.insert(route.container_name.clone(), InvocationQueue::new());
-            }
+    pub async fn new(lambdas: &Vec<Lambda>) -> Self {
+        let mut invocation_queues = HashMap::new();
+
+        for l in lambdas {
+            invocation_queues.insert(l.get_name().to_string(), InvocationQueue::new());
         }
 
         debug!("Creating AWS SQS client");
@@ -188,7 +186,7 @@ impl Store {
         let sqs_client = Client::new(&config);
 
         Store {
-            queues: Arc::new(RwLock::new(queues)),
+            queues: Arc::new(RwLock::new(invocation_queues)),
             sqs_client,
         }
     }

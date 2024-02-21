@@ -62,7 +62,7 @@ pub fn build(args: BuildArgs) -> anyhow::Result<()> {
         debug!("Lambdas: {:#?}", lambdas);
 
         // Extracts the infrastructure ready to be added to the config
-        let infrastructure = get_infrastructure_from_resources(&resources);
+        let infrastructure = get_infrastructure_from_resources(&resources)?;
         debug!("Infrastructure: {:#?}", infrastructure);
 
         // Reads the current config file
