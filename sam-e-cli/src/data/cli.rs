@@ -28,9 +28,11 @@ pub enum Command {
     Init,
 
     #[command(about = "Build the SAM-E environment using a SAM template.yaml file")]
-    Build(BuildArgs),
+    Build,
 
-    #[command(about = "Rebuild the SAM-E environment using just the Config (allowing for manual changes). Will not rebuild from the SAM template file")]
+    #[command(
+        about = "Rebuild the SAM-E environment using just the Config (allowing for manual changes). Will not rebuild from the SAM template file"
+    )]
     Rebuild,
 
     #[command(
@@ -47,9 +49,14 @@ pub struct BuildArgs {
 
     /// Boolean for whether there is more than one SAM file. Will default to false
     #[arg(short, long)]
-    pub multi: Option<bool>,
+    pub multi: bool,
+
+    /// Boolean for whether to use a multi selector to select multiple SAM files. Useful for when
+    /// there are multiple files with different names. Will default to false
+    #[arg(short, long)]
+    pub selector: bool,
 
     /// Boolean for whether it should overwrite the current SAM-E environment or merge with it (if it exists). Will default to false
     #[arg(short, long)]
-    pub overwrite: Option<bool>,
+    pub overwrite: bool,
 }

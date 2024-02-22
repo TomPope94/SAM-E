@@ -1,13 +1,10 @@
-use crate::{
-    data::cli::BuildArgs,
-    scripts::{
-        build::{
-            infrastructure::{create_infrastructure_files, get_infrastructure_from_resources},
-            lambda::get_lambdas_from_resources,
-            template::collect_template_to_resource,
-        },
-        init,
+use crate::scripts::{
+    build::{
+        infrastructure::{create_infrastructure_files, get_infrastructure_from_resources},
+        lambda::{get_lambdas_from_resources, select_lambdas, specify_environment_vars},
+        template::parse_templates_into_resources,
     },
+    init,
 };
 
 use sam_e_types::config::Config;
@@ -16,10 +13,9 @@ use anyhow::Error;
 use std::{env, fs};
 use tracing::{debug, error, info};
 
-const DEFAULT_TEMPLATE: &str = "template.yaml";
 const SAM_E_DIRECTORY: &str = ".sam-e";
 
-pub fn build(args: BuildArgs) -> anyhow::Result<()> {
+pub fn build() -> anyhow::Result<()> {
     info!("Now building the SAM-E environment...");
 
     let current_dir = env::current_dir()?;
@@ -41,17 +37,14 @@ pub fn build(args: BuildArgs) -> anyhow::Result<()> {
         }
     }
 
-    // Sets default values for args if not provided by the user
-    let template_name = args
-        .template_name
-        .unwrap_or_else(|| DEFAULT_TEMPLATE.to_string());
-    let multi = args.multi.unwrap_or_else(|| false);
+    // Get the initiated config to grab the template locations
+    let current_config_raw =
+        fs::read_to_string(format!("{}/sam-e-config.yaml", sam_e_directory_path))?;
+    let current_config: Config = serde_yaml::from_str(&current_config_raw)?;
+    let template_locations = current_config.get_runtime().get_template_locations();
 
-    debug!("Template name: {}", template_name);
-    debug!("Multi: {}", multi);
-
-    // Finds one or more template yaml files, collates them and returns resources sections as a hashmap
-    let resources = collect_template_to_resource(&template_name, &multi, &current_dir);
+    let resources = parse_templates_into_resources(template_locations);
+    debug!("Resources: {:#?}", resources);
 
     if let Ok(resources) = resources {
         info!("Collected template resources successfully, now building resources...");
@@ -59,7 +52,9 @@ pub fn build(args: BuildArgs) -> anyhow::Result<()> {
         // Extracts the lambdas ready to be added to the config
         // TODO: Currently overwrites, should merge based on user input
         let lambdas = get_lambdas_from_resources(&resources);
-        debug!("Lambdas: {:#?}", lambdas);
+        let chosen_lambdas = select_lambdas(lambdas);
+        debug!("Lambdas: {:#?}", chosen_lambdas);
+        let lambdas_with_env_vars = specify_environment_vars(chosen_lambdas);
 
         // Extracts the infrastructure ready to be added to the config
         let infrastructure = get_infrastructure_from_resources(&resources)?;
@@ -71,7 +66,7 @@ pub fn build(args: BuildArgs) -> anyhow::Result<()> {
         let mut config: Config = serde_yaml::from_str(&current_config_raw)?;
 
         config.set_infrastructure(infrastructure);
-        config.set_lambdas(lambdas);
+        config.set_lambdas(lambdas_with_env_vars);
         debug!("Config post build: {:#?}", config);
 
         let config_string = serde_yaml::to_string(&config)?;

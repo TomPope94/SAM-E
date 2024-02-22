@@ -4,52 +4,33 @@ use std::{
     path::{Path, PathBuf},
 };
 
-use anyhow::{Error, Result};
-use serde_yaml::{value::TaggedValue, Value};
-use tracing::{debug, trace, warn};
+use anyhow::Result;
+use fancy_regex::Regex;
+use serde_yaml::Value;
+use tracing::{debug, trace};
 
-/// Gets the raw CloudFormation template file from directory and returns resources specified as
-/// hashmap. If multi set to true, will return all files found collated (i.e. all resources across
-/// all the files).
-pub fn collect_template_to_resource(
-    template_name: &str,
-    multi: &bool,
-    current_dir: &PathBuf,
-) -> anyhow::Result<HashMap<String, Value>> {
-    let template_files = find_all_files(&current_dir, template_name)?;
-    if template_files.is_empty() {
-        return Err(Error::msg("No template files found"));
+/// Takes the vec of template locations (i.e. file paths to the YAML files) and returns a hashmap
+/// of the resources section of the CloudFormation template.
+pub fn parse_templates_into_resources(
+    template_locations: &Vec<String>,
+) -> Result<HashMap<String, Value>> {
+    let mut resources = HashMap::new();
+
+    for location in template_locations {
+        let template = Path::new(&location);
+        let temp_resources = build_template(template)?;
+        temp_resources.iter().for_each(|(k, v)| {
+            resources.insert(k.to_string(), v.to_owned());
+        });
     }
 
-    let resources = match multi {
-        true => {
-            if template_files.len() == 1 {
-                warn!("The multi flag was set to true but only one template file found. If this is correct we recommend removing the multi flag to avoid unexpected behaviour.")
-            }
-            let mut resources = HashMap::new();
-            for file in template_files {
-                let temp_resources = build_template(&file)?;
-                temp_resources.iter().for_each(|(k, v)| {
-                    resources.insert(k.to_string(), v.to_owned());
-                });
-            }
-            Ok(resources)
-        }
-        false => {
-            if template_files.len() > 1 {
-                warn!("Multiple template files found but multi flag set to false (either by default or manually), will use the first one vs collating together");
-            }
-            build_template(&template_files[0])
-        }
-    };
-
-    resources
+    Ok(resources)
 }
 
 /// Builds the template for an individual CloudFormation template returning a hashmap of just
 /// the resources section. Starts by reading the file to a string before passing to serde_yaml to
 /// be parsed into the HashMap.
-fn build_template(template: &PathBuf) -> anyhow::Result<HashMap<String, Value>> {
+fn build_template(template: &Path) -> anyhow::Result<HashMap<String, Value>> {
     debug!("Building template: {:?}", template);
 
     let template_path = template.to_str().unwrap();
@@ -64,9 +45,10 @@ fn build_template(template: &PathBuf) -> anyhow::Result<HashMap<String, Value>> 
     Ok(resources)
 }
 
-/// Recursively goes through directories to find all files of a specific name
-fn find_all_files(path: &impl AsRef<Path>, filename: &str) -> std::io::Result<Vec<PathBuf>> {
+/// Recursively goes through directories to find all files that match a specific regex pattern.
+pub fn find_all_files(path: &impl AsRef<Path>, to_find: &str) -> std::io::Result<Vec<PathBuf>> {
     let mut buf = vec![];
+    let regex = Regex::new(to_find).expect("Invalid regex pattern");
 
     trace!("Reading entries in {:?}", path.as_ref());
     let entries = fs::read_dir(path)?;
@@ -78,13 +60,13 @@ fn find_all_files(path: &impl AsRef<Path>, filename: &str) -> std::io::Result<Ve
 
         if meta.is_dir() {
             trace!("Entry recognized as directory, recursing...");
-            let mut subdir = find_all_files(&entry.path(), filename)?;
+            let mut subdir = find_all_files(&entry.path(), to_find)?;
             buf.append(&mut subdir);
         }
 
-        if meta.is_file() && entry.file_name().to_str().unwrap() == filename {
+        if meta.is_file() && regex.is_match(entry.file_name().to_str().unwrap()).unwrap() {
             trace!("Entry recognized as file, adding to buffer...");
-            debug!("Found file: {:?}", entry.path());
+            trace!("Found file: {:?}", entry.path());
             buf.push(entry.path());
         }
     }

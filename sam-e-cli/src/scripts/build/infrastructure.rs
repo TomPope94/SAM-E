@@ -38,13 +38,17 @@ pub fn get_infrastructure_from_resources(
                             resource_name.to_string(),
                             InfrastructureType::Postgres,
                         ));
-                    }
-
-                    if engine.as_str().unwrap().contains("mysql") {
+                    } else if engine.as_str().unwrap().contains("mysql") {
                         trace!("Database engine recognized as MySQL");
                         infrastructure.push(Infrastructure::new(
                             resource_name.to_string(),
                             InfrastructureType::Mysql,
+                        ));
+                    } else {
+                        warn!("Not able to auto infer engine of DB instance: {}. Defaulting to Postgres", resource_name);
+                        infrastructure.push(Infrastructure::new(
+                            resource_name.to_string(),
+                            InfrastructureType::Postgres,
                         ));
                     }
                 } else {

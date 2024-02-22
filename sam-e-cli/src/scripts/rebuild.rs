@@ -1,8 +1,8 @@
-use sam_e_types::config::Config;
 use crate::scripts::build::infrastructure::create_infrastructure_files;
+use sam_e_types::config::Config;
 
 use std::{env, fs};
-use tracing::{error, info, debug};
+use tracing::{debug, error, info};
 
 const SAM_E_DIRECTORY: &str = ".sam-e";
 
