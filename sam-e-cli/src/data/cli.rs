@@ -30,6 +30,9 @@ pub enum Command {
     #[command(about = "Build the SAM-E environment using a SAM template.yaml file")]
     Build(BuildArgs),
 
+    #[command(about = "Rebuild the SAM-E environment using just the Config (allowing for manual changes). Will not rebuild from the SAM template file")]
+    Rebuild,
+
     #[command(
         about = "Start the SAM-E environment. Will run an Axum API server. Run the generated docker-compose file in separate terminal to complete setup."
     )]
@@ -45,4 +48,8 @@ pub struct BuildArgs {
     /// Boolean for whether there is more than one SAM file. Will default to false
     #[arg(short, long)]
     pub multi: Option<bool>,
+
+    /// Boolean for whether it should overwrite the current SAM-E environment or merge with it (if it exists). Will default to false
+    #[arg(short, long)]
+    pub overwrite: Option<bool>,
 }
