@@ -63,6 +63,10 @@ impl Config {
         &self.lambdas
     }
 
+    pub fn get_runtime(&self) -> &Runtime {
+        &self.runtime
+    }
+
     pub fn get_infrastructure(&self) -> &Vec<Infrastructure> {
         &self.infrastructure
     }
@@ -75,17 +79,25 @@ impl Config {
 /// Configuration for the local runtime
 #[derive(Debug, Deserialize, Serialize, Clone)]
 pub struct Runtime {
-    port: u16,
+    template_locations: Vec<String>,
 }
 
 impl Default for Runtime {
     fn default() -> Self {
-        Self { port: 3000 }
+        Self {
+            template_locations: vec![], // Default to empty
+        }
     }
 }
 
 impl Runtime {
-    pub fn new(port: u16) -> Self {
-        Self { port }
+    pub fn new(template_locations: Vec<String>) -> Self {
+        Self {
+            template_locations,
+        }
+    }
+
+    pub fn get_template_locations(&self) -> &Vec<String> {
+        &self.template_locations
     }
 }

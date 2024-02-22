@@ -24,18 +24,6 @@ pub fn get_lambdas_from_resources(resources: &HashMap<String, serde_yaml::Value>
                 )
                 .unwrap_or(HashMap::new());
 
-                let environment_vars_input: HashMap<String, String> = environment_vars
-                    .iter()
-                    .map(|(k, v)| {
-                        let value = dialoguer::Input::<String>::new()
-                            .with_prompt(format!("Found an env variable: {} for container: {}. Type to overwrite value", k, resource_name))
-                            .default(v.to_string())
-                            .interact()
-                            .unwrap();
-                        (k.to_string(), value)
-                    })
-                    .collect();
-
                 let events: HashMap<String, Value> =
                     serde_yaml::from_value(resource["Properties"]["Events"].to_owned())
                         .unwrap_or(HashMap::new());
@@ -104,12 +92,69 @@ pub fn get_lambdas_from_resources(resources: &HashMap<String, serde_yaml::Value>
                 let lambda = Lambda::new(
                     resource_name.to_string(),
                     image_uri,
-                    environment_vars_input,
+                    environment_vars,
                     events_vec,
                 );
                 lambdas.push(lambda);
             }
         }
+    }
+
+    lambdas
+}
+
+// let environment_vars_input: HashMap<String, String> = environment_vars
+//     .iter()
+//     .map(|(k, v)| {
+//         let value = dialoguer::Input::<String>::new()
+//             .with_prompt(format!("Found an env variable: {} for container: {}. Type to overwrite value", k, resource_name))
+//             .default(v.to_string())
+//             .interact()
+//             .unwrap();
+//         (k.to_string(), value)
+//     })
+//     .collect();
+
+pub fn select_lambdas(lambdas: Vec<Lambda>) -> Vec<Lambda> {
+    let lambdas_select = dialoguer::MultiSelect::new()
+        .with_prompt("Select which lambdas you would like to spin up in your environment:")
+        .items_checked(
+            &lambdas
+                .iter()
+                .map(|l| (l.get_name(), true))
+                .collect::<Vec<(&str, bool)>>(),
+        )
+        .interact()
+        .unwrap();
+
+    lambdas_select
+        .iter()
+        .map(|i| lambdas[*i].clone())
+        .collect::<Vec<_>>()
+}
+
+pub fn specify_environment_vars(lambdas: Vec<Lambda>) -> Vec<Lambda> {
+    let mut lambdas = lambdas;
+
+    for lambda in lambdas.iter_mut() {
+        let environment_vars = lambda.get_environment_vars();
+        let environment_vars_input: HashMap<String, String> = environment_vars
+            .iter()
+            .map(|(k, v)| {
+                let value = dialoguer::Input::<String>::new()
+                    .with_prompt(format!(
+                        "Found an env variable: {} for container: {}. Type to overwrite value",
+                        k,
+                        lambda.get_name()
+                    ))
+                    .default(v.to_string())
+                    .interact()
+                    .unwrap();
+                (k.to_string(), value)
+            })
+            .collect();
+
+        lambda.set_environment_vars(environment_vars_input);
     }
 
     lambdas

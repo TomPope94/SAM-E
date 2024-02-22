@@ -38,6 +38,10 @@ impl Lambda {
         self.environment_vars = environment_vars;
     }
 
+    pub fn get_environment_vars(&self) -> &HashMap<String, String> {
+        &self.environment_vars
+    }
+
     pub fn add_event(&mut self, event: Event) {
         self.events.push(event);
     }
