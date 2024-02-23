@@ -1,6 +1,9 @@
-use sam_e_types::config::{
-    infrastructure::{Infrastructure, InfrastructureType},
-    Config,
+use sam_e_types::{
+    cloudformation::resource::{Bucket, Resource},
+    config::{
+        infrastructure::{Infrastructure, InfrastructureType},
+        Config,
+    },
 };
 
 use anyhow::{Error, Result};
@@ -20,25 +23,28 @@ struct Asset;
 /// it is added to the vector.
 /// TODO: Should have a more generic approach to this, currently only supports RDS, S3, and SQS
 pub fn get_infrastructure_from_resources(
-    resources: &HashMap<String, serde_yaml::Value>,
+    resources: &HashMap<String, Resource>,
 ) -> Result<Vec<Infrastructure>> {
     let mut infrastructure = vec![];
 
     for (resource_name, resource) in resources.iter() {
         trace!("Resource name: {}", resource_name);
-        if let Some(resource_type) = resource.get("Type") {
-            if resource_type == "AWS::RDS::DBInstance" {
+        match resource {
+            Resource::RDSInstance(db_data) => {
                 trace!("Found a DB instance!");
                 trace!("Now working out engine type...");
 
-                if let Some(engine) = resource["Properties"].get("Engine") {
-                    if engine.as_str().unwrap().contains("postgresql") {
+                let db_props = db_data.get_properties();
+                debug!("Properties: {:?}", db_props);
+
+                if let Some(engine) = db_props.get_engine().as_str() {
+                    if engine.contains("postgresql") {
                         trace!("Database engine recognized as Postgres");
                         infrastructure.push(Infrastructure::new(
                             resource_name.to_string(),
                             InfrastructureType::Postgres,
                         ));
-                    } else if engine.as_str().unwrap().contains("mysql") {
+                    } else if engine.contains("mysql") {
                         trace!("Database engine recognized as MySQL");
                         infrastructure.push(Infrastructure::new(
                             resource_name.to_string(),
@@ -52,22 +58,29 @@ pub fn get_infrastructure_from_resources(
                         ));
                     }
                 } else {
-                    error!("No engine type found for DB instance: {}", resource_name);
+                    warn!("No engine type found for DB instance or unable to parse into string: {}. Defaulting to Postgres", resource_name);
+                    infrastructure.push(Infrastructure::new(
+                        resource_name.to_string(),
+                        InfrastructureType::Postgres,
+                    ));
                 }
             }
-
-            if resource_type == "AWS::SQS::Queue" {
+            Resource::SQSQueue(_) => {
                 trace!("Found a queue!");
                 infrastructure.push(Infrastructure::new(
                     resource_name.to_string(),
                     InfrastructureType::Sqs,
                 ));
             }
-
-            if resource_type == "AWS::S3::Bucket" {
+            Resource::S3Bucket(s3_data) => {
                 trace!("Found a bucket!");
 
-                infrastructure.push(create_infrastructure_from_s3_resource(&resource)?);
+                infrastructure.push(create_infrastructure_from_s3_resource(
+                    s3_data.get_properties(),
+                )?);
+            }
+            _ => {
+                trace!("Resource not recognized as infrastructure");
             }
         }
     }
@@ -79,46 +92,25 @@ pub fn get_infrastructure_from_resources(
 /// and adding the bucket name to the infrastructure object. If there are any queue configurations
 /// they are also added to the triggers of the infrastructure object. Will return an error if the
 /// template yaml is not formatted correctly.
-fn create_infrastructure_from_s3_resource(resource: &serde_yaml::Value) -> Result<Infrastructure> {
-    if let Some(bucket_name) = resource["Properties"].get("BucketName") {
-        if let Some(bucket_name) = bucket_name.as_str() {
-            debug!("Found bucket name for S3 bucket: {}", bucket_name);
-            let mut new_infrastructure =
-                Infrastructure::new(bucket_name.to_string(), InfrastructureType::S3);
+fn create_infrastructure_from_s3_resource(resource: &Bucket) -> Result<Infrastructure> {
+    let bucket_name = resource.get_bucket_name();
+    let mut new_infrastructure =
+        Infrastructure::new(bucket_name.as_str().unwrap_or_default().to_string(), InfrastructureType::S3);
 
-            if let Some(notification_configuration) =
-                resource["Properties"].get("NotificationConfiguration")
-            {
-                if let Some(queue_config) = notification_configuration.get("QueueConfigurations") {
-                    debug!(
-                        "Found queue configurations for S3 bucket: {}",
-                        bucket_name.to_string()
-                    );
-                    if let Some(queue_config) = queue_config.as_sequence() {
-                        for queue in queue_config {
-                            debug!("Found queue {:?}", queue);
-                            new_infrastructure.add_queue_to_triggers(
-                                queue["Queue"].as_str().unwrap().to_string(),
-                            );
-                        }
-                    }
-                }
-            } else {
-                warn!(
-                    "No notification configurations found for S3 bucket: {}",
-                    bucket_name.to_string()
-                );
+    if let Some(notification_configuration) = resource.get_notification_configuration() {
+        if let Some(queue_config) = notification_configuration.get_queue_configurations() {
+            for queue in queue_config {
+                new_infrastructure.add_queue_to_triggers(queue.get_queue().as_str().unwrap().to_string());
             }
-
-            Ok(new_infrastructure)
-        } else {
-            Err(Error::msg("Bucket name is not a string"))
         }
     } else {
-        Err(Error::msg(
-            "No bucket name provided for S3 bucket. Please fix this in your template.yaml file",
-        ))
+        warn!(
+            "No notification configurations found for S3 bucket: {}",
+            bucket_name.as_str().unwrap_or_default().to_string()
+        );
     }
+
+    Ok(new_infrastructure)
 }
 
 /// Creates the infrastructure files required for the local environment. This includes the

@@ -10,20 +10,22 @@ Resources:
   TestApiGateway:
     Type: AWS::Serverless::Api
     Properties:
-      Name: Test
+      Name: Test_Name
       Description: Test
       StageName: Prod
     Domain:
       DomainName: Test
       CertificateArn: Test
 
-  SnapasAuthAppApiDomainMapping:
+  AppApiDomainMapping:
     Type: AWS::ApiGateway::BasePathMapping
     Properties:
       DomainName: Test
       RestApiId: TestApiGateway
       BasePath: axum
-      Stage: !Ref TestApiGateway.Stage
+      Stage: 
+        Ref: TestApiGateway.Stage
+
   TestAxum:
     Type: AWS::Serverless::Function
     Properties:
@@ -35,13 +37,15 @@ Resources:
         Index:
           Type: Api
           Properties:
-            RestApiId: !Ref TestApiGateway
+            RestApiId:
+              Ref: TestApiGateway
             Path: /
             Method: ANY
         Main:
           Type: Api
           Properties:
-            RestApiId: !Ref TestApiGateway
+            RestApiId: TestApiGateway
+              # Ref: TestApiGateway
             Path: /{path+}
             Method: ANY
       Timeout: 30
@@ -49,7 +53,8 @@ Resources:
       Environment:
         Variables:
           TEST_VAR: testing
-          TEST_SECOND: !Ref Domain
+          TEST_SECOND: 
+            Ref: Domain
 
   TestRust:
     Type: AWS::Serverless::Function
@@ -88,7 +93,8 @@ Resources:
         MySQSEvent:
           Type: SQS
           Properties:
-            Queue: !GetAtt TestDeliverySQS.Arn
+            Queue: 
+              Fn::GetAtt: TestDeliverySQS.Arn
             BatchSize: 10
   TestDeliverySQS:
     Type: AWS::SQS::Queue
@@ -105,7 +111,7 @@ Resources:
     Properties:
       Engine: aurora-postgresql
       DBInstanceClass: db.serverless
-      DBClusterIdentifier: !Ref DBCluster
+      DBClusterIdentifier: Ref DBCluster
 
   HardcodedNameBucket:
     Type: "AWS::S3::Bucket"
@@ -116,10 +122,6 @@ Resources:
         QueueConfigurations:
           - Event: s3:ObjectCreated:Put
             Queue: TestDeliverySQS
-            # Queue: !GetAtt TestDeliverySQS.Arn
-        # LambdaConfigurations:
-        #   - Event: s3:ObjectCreated:Put
-        #     Function: !GetAtt TODOLambda
       PublicAccessBlockConfiguration:
         BlockPublicAcls: true
         IgnorePublicAcls: true
@@ -130,7 +132,11 @@ Resources:
     Type: "AWS::S3::Bucket"
     Properties:
       # BucketName: !Sub "${EnvironmentName}-test-bucket"
-      BucketName: test-bucket-002
+      BucketName: 
+        Fn::Sub: 
+          - "${EnvironmentName}-test-bucket"
+          - EnvironmentName:
+              Ref: EnvironmentName
       AccessControl: Private
       PublicAccessBlockConfiguration:
         BlockPublicAcls: true
