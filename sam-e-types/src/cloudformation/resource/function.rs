@@ -2,9 +2,9 @@ use std::collections::HashMap;
 use serde::Deserialize;
 use crate::cloudformation::{
     resource::Event,
-    // template::CloudFormationValue as Value,
+    template::CloudFormationValue as Value,
 };
-use serde_yaml::Value;
+// use serde_yaml::Value;
 
 #[derive(Deserialize, Debug, PartialEq, Eq)]
 #[serde(rename_all = "PascalCase")]

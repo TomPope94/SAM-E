@@ -24,6 +24,8 @@ pub enum Resource {
     SQSQueue(ResourceContainer<Queue>),
     #[serde(rename = "AWS::S3::Bucket")]
     S3Bucket(ResourceContainer<Bucket>),
+    #[serde(untagged)]
+    Other(serde_yaml::Value), // A catch all for unsupported resources
 }
 
 #[derive(Deserialize, Debug, PartialEq, Eq)]

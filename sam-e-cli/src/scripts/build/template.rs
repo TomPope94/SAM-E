@@ -40,8 +40,6 @@ fn build_template(template: &Path) -> anyhow::Result<HashMap<String, Resource>> 
     let yaml_file = fs::read_to_string(template_path)?;
     debug!("YAML file read successfully");
 
-    fs::write("./.sam-e/test.yaml", &yaml_file)?;
-
     let template_value: Template = serde_yaml::from_str(&yaml_file)?;
     debug!("Template value: {:?}", template_value);
 

@@ -37,7 +37,7 @@ Resources:
         Index:
           Type: Api
           Properties:
-            RestApiId:
+            RestApiId: 
               Ref: TestApiGateway
             Path: /
             Method: ANY

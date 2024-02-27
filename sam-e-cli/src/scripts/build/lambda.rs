@@ -20,7 +20,7 @@ pub fn get_lambdas_from_resources(resources: &HashMap<String, Resource>) -> Resu
                 debug!("Properties: {:?}", properties);
 
                 let image_uri = if let Some(image) = properties.get_image_uri() {
-                    if let Some(image) = image.as_str() {
+                    if let Some(image) = image.as_local_string() {
                         image
                     } else {
                         return Err(anyhow::anyhow!(
@@ -44,8 +44,8 @@ pub fn get_lambdas_from_resources(resources: &HashMap<String, Resource>) -> Resu
                             let event_props = event_data.get_properties();
 
                             let base_path = if let Some(api_id) = event_props.get_rest_api_id() {
-                                if let Some(api_id) = api_id.as_str() {
-                                    get_base_path(api_id, &resources)
+                                if let Some(api_id) = api_id.as_local_string() {
+                                    get_base_path(&api_id, &resources)
                                 } else {
                                     None
                                 }
@@ -55,9 +55,9 @@ pub fn get_lambdas_from_resources(resources: &HashMap<String, Resource>) -> Resu
 
                             let mut event = Event::new(EventType::Api);
                             event.set_api_properties(
-                                event_props.get_path().as_str().unwrap().to_string(),
+                                event_props.get_path().as_local_string().unwrap().to_string(),
                                 base_path,
-                                event_props.get_method().as_str().unwrap().to_string(),
+                                event_props.get_method().as_local_string().unwrap().to_string(),
                             );
 
                             event
@@ -65,7 +65,7 @@ pub fn get_lambdas_from_resources(resources: &HashMap<String, Resource>) -> Resu
                         resource::Event::Sqs(event_data) => {
                             let event_props = event_data.get_properties();
 
-                            let queue = event_props.get_queue().as_str().unwrap_or_default().to_string();
+                            let queue = event_props.get_queue().as_local_string().unwrap_or_default().to_string();
 
                             let mut event = Event::new(EventType::Sqs);
                             event.set_sqs_properties(queue);
@@ -78,7 +78,7 @@ pub fn get_lambdas_from_resources(resources: &HashMap<String, Resource>) -> Resu
                 let env_vars: HashMap<String, String> = if let Some(function_env) = properties.get_environment() {
                     function_env.get_environment_vars()
                         .iter()
-                        .map(|(k, v)| (k.to_string(), v.as_str().unwrap_or_default().to_string()))
+                        .map(|(k, v)| (k.to_string(), v.as_local_string().unwrap_or_default().to_string()))
                         .collect()
                 } else {
                     HashMap::new()
@@ -168,7 +168,7 @@ fn get_base_path(api_id: &str, sam_resources: &HashMap<String, Resource>) -> Opt
                 let properties = resource_details.get_properties();
                 let rest_api_id = properties.get_rest_api_id();
 
-                if let Some(rest_api_id) = rest_api_id.as_str() {
+                if let Some(rest_api_id) = rest_api_id.as_local_string() {
                     if rest_api_id == api_id {
                         true
                     } else {
@@ -188,7 +188,7 @@ fn get_base_path(api_id: &str, sam_resources: &HashMap<String, Resource>) -> Opt
             Resource::BasePathMapping(resource_details) => {
                 let properties = resource_details.get_properties();
                 let base_path = properties.get_base_path();
-                if let Some(base_path) = base_path.as_str() {
+                if let Some(base_path) = base_path.as_local_string() {
                     return Some(base_path.to_string());
                 }
             }

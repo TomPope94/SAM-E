@@ -77,6 +77,7 @@ pub fn get_infrastructure_from_resources(
 
                 infrastructure.push(create_infrastructure_from_s3_resource(
                     s3_data.get_properties(),
+                    resource_name,
                 )?);
             }
             _ => {
@@ -92,21 +93,39 @@ pub fn get_infrastructure_from_resources(
 /// and adding the bucket name to the infrastructure object. If there are any queue configurations
 /// they are also added to the triggers of the infrastructure object. Will return an error if the
 /// template yaml is not formatted correctly.
-fn create_infrastructure_from_s3_resource(resource: &Bucket) -> Result<Infrastructure> {
-    let bucket_name = resource.get_bucket_name();
+fn create_infrastructure_from_s3_resource(resource: &Bucket, resource_name: &str) -> Result<Infrastructure> {
+    debug!("Creating infrastructure from S3 resource");
+    debug!("Properties: {:?}", resource);
+    let bucket_name = if let Some(name) = resource.get_bucket_name().as_local_string() {
+        if name.is_empty() {
+            warn!("Unable to parse bucket name for S3 resource: {}. Defaulting to resource name", resource_name);
+            resource_name.to_lowercase() // makes lowercase because s3 buckets are lowercase
+        } else {
+            name
+        }
+    } else {
+        warn!("Unable to find bucket name for S3 resource: {}. Defaulting to resource name", resource_name);
+        resource_name.to_lowercase() // makes lowercase because s3 buckets are lowercase
+    };
+
     let mut new_infrastructure =
-        Infrastructure::new(bucket_name.as_str().unwrap_or_default().to_string(), InfrastructureType::S3);
+        Infrastructure::new(bucket_name.to_string(), InfrastructureType::S3);
 
     if let Some(notification_configuration) = resource.get_notification_configuration() {
         if let Some(queue_config) = notification_configuration.get_queue_configurations() {
             for queue in queue_config {
-                new_infrastructure.add_queue_to_triggers(queue.get_queue().as_str().unwrap().to_string());
+                let queue_val = queue.get_queue().as_local_string();
+                if let Some(queue_name) = queue_val {
+                    new_infrastructure.add_queue_to_triggers(queue_name);
+                } else {
+                    warn!("Unable to parse queue name for S3 bucket: {}. Skipping", bucket_name);
+                }
             }
         }
     } else {
         warn!(
             "No notification configurations found for S3 bucket: {}",
-            bucket_name.as_str().unwrap_or_default().to_string()
+            bucket_name
         );
     }
 
@@ -119,16 +138,6 @@ fn create_infrastructure_from_s3_resource(resource: &Bucket) -> Result<Infrastru
 /// .sam-e directory. All files are embedded in the binary so no need to worry about them being lost.
 pub fn create_infrastructure_files(config: &Config) -> anyhow::Result<()> {
     let infrastructure = config.get_infrastructure();
-
-    if let true = has_infrastructure_type(infrastructure, InfrastructureType::S3) {
-        info!("Detected S3 infrastructure. Creating required files within .sam-e directory");
-        fs::create_dir_all(format!("{}/local-s3", SAM_E_DIRECTORY))?;
-    }
-
-    if let true = has_infrastructure_type(infrastructure, InfrastructureType::Sqs) {
-        info!("Detected SQS infrastructure. Creating required files within .sam-e directory");
-        fs::create_dir_all(format!("{}/local-queue", SAM_E_DIRECTORY))?;
-    }
 
     let mut tera = Tera::default();
     let mut context = Context::new();
@@ -160,8 +169,22 @@ pub fn create_infrastructure_files(config: &Config) -> anyhow::Result<()> {
         return Err(Error::msg("Failed to find docker-compose template"));
     };
 
-    create_s3_dockerfile(&tera, &context)?;
-    create_queue_config(&tera, &context)?;
+    if let true = has_infrastructure_type(infrastructure, InfrastructureType::S3) {
+        info!("Detected S3 infrastructure. Creating required files within .sam-e directory");
+        fs::create_dir_all(format!("{}/local-s3", SAM_E_DIRECTORY))?;
+        create_s3_dockerfile(&tera, &context)?;
+    } else {
+        debug!("No S3 infrastructure detected. Skipping creation of S3 Dockerfile");
+    }
+
+    if let true = has_infrastructure_type(infrastructure, InfrastructureType::Sqs) {
+        info!("Detected SQS infrastructure. Creating required files within .sam-e directory");
+        fs::create_dir_all(format!("{}/local-queue", SAM_E_DIRECTORY))?;
+        create_queue_config(&tera, &context)?;
+    } else {
+        debug!("No SQS infrastructure detected. Skipping creation of queue config");
+    }
+
     create_docker_compose(&tera, &context)?;
     Ok(())
 }
