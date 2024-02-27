@@ -6,21 +6,22 @@ use std::{
 
 use anyhow::Result;
 use fancy_regex::Regex;
-use serde_yaml::Value;
 use tracing::{debug, trace};
+
+use sam_e_types::cloudformation::{Resource, Template};
 
 /// Takes the vec of template locations (i.e. file paths to the YAML files) and returns a hashmap
 /// of the resources section of the CloudFormation template.
 pub fn parse_templates_into_resources(
     template_locations: &Vec<String>,
-) -> Result<HashMap<String, Value>> {
-    let mut resources = HashMap::new();
+) -> Result<HashMap<String, Resource>> {
+    let mut resources: HashMap<String, Resource> = HashMap::new();
 
     for location in template_locations {
         let template = Path::new(&location);
         let temp_resources = build_template(template)?;
-        temp_resources.iter().for_each(|(k, v)| {
-            resources.insert(k.to_string(), v.to_owned());
+        temp_resources.into_iter().for_each(|(k, v)| {
+            resources.insert(k.to_string(), v);
         });
     }
 
@@ -30,7 +31,7 @@ pub fn parse_templates_into_resources(
 /// Builds the template for an individual CloudFormation template returning a hashmap of just
 /// the resources section. Starts by reading the file to a string before passing to serde_yaml to
 /// be parsed into the HashMap.
-fn build_template(template: &Path) -> anyhow::Result<HashMap<String, Value>> {
+fn build_template(template: &Path) -> anyhow::Result<HashMap<String, Resource>> {
     debug!("Building template: {:?}", template);
 
     let template_path = template.to_str().unwrap();
@@ -39,10 +40,10 @@ fn build_template(template: &Path) -> anyhow::Result<HashMap<String, Value>> {
     let yaml_file = fs::read_to_string(template_path)?;
     debug!("YAML file read successfully");
 
-    let template_value: Value = serde_yaml::from_str(&yaml_file)?;
-    let resources = serde_yaml::from_value(template_value["Resources"].to_owned())?;
+    let template_value: Template = serde_yaml::from_str(&yaml_file)?;
+    debug!("Template value: {:?}", template_value);
 
-    Ok(resources)
+    Ok(template_value.resources)
 }
 
 /// Recursively goes through directories to find all files that match a specific regex pattern.
