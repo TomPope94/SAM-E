@@ -1,5 +1,5 @@
 use sam_e_types::{
-    cloudformation::resource::{Bucket, Resource},
+    cloudformation::resource::{Bucket, Resource, DbInstance, ResourceType},
     config::{
         infrastructure::{Infrastructure, InfrastructureType},
         Config,
@@ -29,12 +29,15 @@ pub fn get_infrastructure_from_resources(
 
     for (resource_name, resource) in resources.iter() {
         trace!("Resource name: {}", resource_name);
-        match resource {
-            Resource::RDSInstance(db_data) => {
+        match resource.resource_type {
+            ResourceType::DbInstance => {
                 trace!("Found a DB instance!");
                 trace!("Now working out engine type...");
 
-                let db_props = db_data.get_properties();
+                let Ok(db_props) = serde_yaml::from_value::<DbInstance>(resource.properties.clone()) else {
+                    warn!("Unable to parse DB instance properties for: {}. Skipping", resource_name);
+                    continue;
+                };
                 debug!("Properties: {:?}", db_props);
 
                 if let Some(engine) = db_props.get_engine().as_str() {
@@ -65,18 +68,23 @@ pub fn get_infrastructure_from_resources(
                     ));
                 }
             }
-            Resource::SQSQueue(_) => {
+            ResourceType::Queue => {
                 trace!("Found a queue!");
                 infrastructure.push(Infrastructure::new(
                     resource_name.to_string(),
                     InfrastructureType::Sqs,
                 ));
             }
-            Resource::S3Bucket(s3_data) => {
+            ResourceType::Bucket => {
                 trace!("Found a bucket!");
 
+                let Ok(s3_data) = serde_yaml::from_value::<Bucket>(resource.properties.clone()) else {
+                    warn!("Unable to parse S3 properties for: {}. Skipping", resource_name);
+                    continue;
+                };
+
                 infrastructure.push(create_infrastructure_from_s3_resource(
-                    s3_data.get_properties(),
+                    &s3_data,
                     resource_name,
                 )?);
             }
@@ -96,12 +104,12 @@ pub fn get_infrastructure_from_resources(
 fn create_infrastructure_from_s3_resource(resource: &Bucket, resource_name: &str) -> Result<Infrastructure> {
     debug!("Creating infrastructure from S3 resource");
     debug!("Properties: {:?}", resource);
-    let bucket_name = if let Some(name) = resource.get_bucket_name().as_local_string() {
+    let bucket_name = if let Some(name) = resource.get_bucket_name().as_str() {
         if name.is_empty() {
             warn!("Unable to parse bucket name for S3 resource: {}. Defaulting to resource name", resource_name);
             resource_name.to_lowercase() // makes lowercase because s3 buckets are lowercase
         } else {
-            name
+            name.to_string()
         }
     } else {
         warn!("Unable to find bucket name for S3 resource: {}. Defaulting to resource name", resource_name);
@@ -114,9 +122,9 @@ fn create_infrastructure_from_s3_resource(resource: &Bucket, resource_name: &str
     if let Some(notification_configuration) = resource.get_notification_configuration() {
         if let Some(queue_config) = notification_configuration.get_queue_configurations() {
             for queue in queue_config {
-                let queue_val = queue.get_queue().as_local_string();
+                let queue_val = queue.get_queue().as_str();
                 if let Some(queue_name) = queue_val {
-                    new_infrastructure.add_queue_to_triggers(queue_name);
+                    new_infrastructure.add_queue_to_triggers(queue_name.to_string());
                 } else {
                     warn!("Unable to parse queue name for S3 bucket: {}. Skipping", bucket_name);
                 }

@@ -1,6 +1,6 @@
 use serde::Deserialize;
-use crate::cloudformation::template::CloudFormationValue as Value;
-// use serde_yaml::Value;
+// use crate::cloudformation::template::CloudFormationValue as Value;
+use serde_yaml::Value;
 
 #[derive(Deserialize, Debug, PartialEq, Eq)]
 #[serde(rename_all = "PascalCase")]

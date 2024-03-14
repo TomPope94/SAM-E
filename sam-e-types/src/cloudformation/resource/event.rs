@@ -1,27 +1,23 @@
 use serde::Deserialize;
-use crate::cloudformation::template::CloudFormationValue as Value;
-// use serde_yaml::Value;
+// use crate::cloudformation::template::CloudFormationValue as Value;
+use serde_yaml::Value;
 
 #[derive(Deserialize, Debug, PartialEq, Eq)]
-#[serde(rename_all = "PascalCase")]
-#[serde(tag = "Type")]
-pub enum Event {
+pub enum EventType {
     #[serde(rename = "Api")]
-    Api(EventContainer<ApiEvent>),
-    #[serde(rename = "SQS")]
-    Sqs(EventContainer<SqsEvent>),
+    Api,
+    #[serde(rename = "Sqs")]
+    Sqs,
+    #[serde(untagged)]
+    Other(serde_yaml::Value),
 }
 
 #[derive(Deserialize, Debug, PartialEq, Eq)]
 #[serde(rename_all = "PascalCase")]
-pub struct EventContainer<T> {
-    properties: T,
-}
-
-impl <T> EventContainer<T> {
-    pub fn get_properties(&self) -> &T {
-        &self.properties
-    }
+pub struct Event {
+    #[serde(rename = "Type")]
+    pub event_type: EventType,
+    pub properties: Value,
 }
 
 #[derive(Deserialize, Debug, PartialEq, Eq)]
