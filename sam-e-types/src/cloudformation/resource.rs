@@ -7,7 +7,7 @@ pub mod db_instance;
 pub mod queue;
 pub mod bucket;
 
-pub use resource::Resource;
+pub use resource::{Resource, ResourceType};
 pub use event::Event;
 pub use function::Function;
 pub use apigw::ApiGateway;

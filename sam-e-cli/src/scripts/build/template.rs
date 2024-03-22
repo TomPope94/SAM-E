@@ -41,7 +41,7 @@ fn build_template(template: &Path) -> anyhow::Result<HashMap<String, Resource>> 
     debug!("YAML file read successfully");
 
     let template_value: Template = serde_yaml::from_str(&yaml_file)?;
-    debug!("Template value: {:?}", template_value);
+    debug!("Template value: {:#?}", template_value);
 
     Ok(template_value.resources)
 }

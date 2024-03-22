@@ -1,6 +1,6 @@
 use crate::config::{
     infrastructure::{Infrastructure, Triggers},
-    lambda::{EventProperties, EventType, Lambda},
+    lambda::{EventProperties, Lambda},
 };
 use serde::{Deserialize, Serialize};
 
@@ -31,27 +31,29 @@ impl Config {
         // This makes the invoker more efficient so we don't have to check all lambdas for each event
         for lambda in lambdas.iter() {
             for event in lambda.get_events() {
-                match event.get_event_type() {
-                    EventType::Sqs => {
-                        let queue_name = match event.get_properties() {
-                            Some(EventProperties::Sqs(sqs_properties)) => {
-                                sqs_properties.get_queue().clone()
-                            }
-                            _ => String::new(),
-                        };
-                        for infrastructure in self.infrastructure.iter_mut() {
-                            if infrastructure.get_name() == queue_name {
-                                if let Some(triggers) = infrastructure.get_mut_triggers() {
-                                    triggers.add_lambda(lambda.get_name().to_string());
-                                } else {
-                                    let mut triggers = Triggers::new();
-                                    triggers.add_lambda(lambda.get_name().to_string());
-                                    infrastructure.set_triggers(triggers);
+                if let Some(event_properties) = event.get_properties() {
+                    match event_properties {
+                        EventProperties::Sqs(_) => {
+                            let queue_name = match event.get_properties() {
+                                Some(EventProperties::Sqs(sqs_properties)) => {
+                                    sqs_properties.get_queue().clone()
+                                }
+                                _ => String::new(),
+                            };
+                            for infrastructure in self.infrastructure.iter_mut() {
+                                if infrastructure.get_name() == queue_name {
+                                    if let Some(triggers) = infrastructure.get_mut_triggers() {
+                                        triggers.add_lambda(lambda.get_name().to_string());
+                                    } else {
+                                        let mut triggers = Triggers::new();
+                                        triggers.add_lambda(lambda.get_name().to_string());
+                                        infrastructure.set_triggers(triggers);
+                                    }
                                 }
                             }
                         }
+                        _ => {}
                     }
-                    _ => {}
                 }
             }
         }

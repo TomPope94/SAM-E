@@ -104,6 +104,8 @@ impl EventSqsProperties {
 
 /// Properties for an event - abstracted to allow for different event types
 #[derive(Debug, Deserialize, Serialize, Clone)]
+#[serde(rename_all = "snake_case")]
+#[serde(tag = "type")]
 pub enum EventProperties {
     Api(EventApiProperties),
     Sqs(EventSqsProperties),
@@ -112,7 +114,6 @@ pub enum EventProperties {
 /// A Lambda function event as specified in the SAM template
 #[derive(Debug, Deserialize, Serialize, Clone)]
 pub struct Event {
-    event_type: EventType,
     #[serde(skip_serializing_if = "Option::is_none")]
     properties: Option<EventProperties>,
 }
@@ -121,7 +122,6 @@ impl Event {
     pub fn new(event_type: EventType) -> Self {
         match event_type {
             EventType::Api => Self {
-                event_type,
                 properties: Some(EventProperties::Api(EventApiProperties {
                     base_path: None,
                     path: String::new(),
@@ -130,7 +130,6 @@ impl Event {
                 })),
             },
             EventType::Sqs => Self {
-                event_type,
                 properties: Some(EventProperties::Sqs(EventSqsProperties {
                     queue: String::new(),
                 })),
@@ -166,17 +165,6 @@ impl Event {
                 sqs_properties.queue = queue;
             }
             _ => {}
-        }
-    }
-
-    pub fn get_event_type(&self) -> &EventType {
-        &self.event_type
-    }
-
-    pub fn get_event_type_str(&self) -> &str {
-        match self.event_type {
-            EventType::Api => "Api",
-            EventType::Sqs => "Sqs",
         }
     }
 

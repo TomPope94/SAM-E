@@ -1,7 +1,7 @@
 use crate::data::store::Store;
 
 use sam_e_types::config::{
-    lambda::EventType, Config, Infrastructure, Lambda
+    Config, Infrastructure, Lambda
 };
 
 #[derive(Debug, Clone)]
@@ -27,7 +27,7 @@ impl ApiState {
         self.lambdas.iter().filter(|l| {
             l.get_events()
                 .into_iter()
-                .any(|e| e.get_event_type() == &EventType::Api)
+                .any(|e| e.get_api_properties().is_some())
         }).collect()
     }
 
