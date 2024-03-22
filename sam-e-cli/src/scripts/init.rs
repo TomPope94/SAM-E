@@ -1,4 +1,4 @@
-use sam_e_types::config::config::{Config, Runtime};
+use sam_e_types::config::config::{Config, RuntimeBuilder};
 
 use std::{env, fs};
 use tracing::{debug, info, warn};
@@ -50,7 +50,10 @@ pub fn init() -> anyhow::Result<()> {
     let sam_e_config_path = format!("{}/sam-e-config.yaml", sam_e_directory_path);
     info!("Creating SAM-E config file at: {:?}", sam_e_config_path);
 
-    let new_runtime = Runtime::new(selected_as_str);
+    let new_runtime = RuntimeBuilder::new()
+        .with_template_locations(selected_as_str)
+        .build();
+
     let new_config = Config::new(vec![], new_runtime, vec![]);
     let config_string = serde_yaml::to_string(&new_config)?;
 

@@ -1,5 +1,5 @@
 use sam_e_types::{
-    cloudformation::resource::{Bucket, Resource, DbInstance, ResourceType},
+    cloudformation::resource::{Bucket, DbInstance, Resource, ResourceType},
     config::{
         infrastructure::{Infrastructure, InfrastructureType},
         Config,
@@ -34,8 +34,13 @@ pub fn get_infrastructure_from_resources(
                 trace!("Found a DB instance!");
                 trace!("Now working out engine type...");
 
-                let Ok(db_props) = serde_yaml::from_value::<DbInstance>(resource.properties.clone()) else {
-                    warn!("Unable to parse DB instance properties for: {}. Skipping", resource_name);
+                let Ok(db_props) =
+                    serde_yaml::from_value::<DbInstance>(resource.properties.clone())
+                else {
+                    warn!(
+                        "Unable to parse DB instance properties for: {}. Skipping",
+                        resource_name
+                    );
                     continue;
                 };
                 debug!("Properties: {:?}", db_props);
@@ -78,8 +83,12 @@ pub fn get_infrastructure_from_resources(
             ResourceType::Bucket => {
                 trace!("Found a bucket!");
 
-                let Ok(s3_data) = serde_yaml::from_value::<Bucket>(resource.properties.clone()) else {
-                    warn!("Unable to parse S3 properties for: {}. Skipping", resource_name);
+                let Ok(s3_data) = serde_yaml::from_value::<Bucket>(resource.properties.clone())
+                else {
+                    warn!(
+                        "Unable to parse S3 properties for: {}. Skipping",
+                        resource_name
+                    );
                     continue;
                 };
 
@@ -101,18 +110,27 @@ pub fn get_infrastructure_from_resources(
 /// and adding the bucket name to the infrastructure object. If there are any queue configurations
 /// they are also added to the triggers of the infrastructure object. Will return an error if the
 /// template yaml is not formatted correctly.
-fn create_infrastructure_from_s3_resource(resource: &Bucket, resource_name: &str) -> Result<Infrastructure> {
+fn create_infrastructure_from_s3_resource(
+    resource: &Bucket,
+    resource_name: &str,
+) -> Result<Infrastructure> {
     debug!("Creating infrastructure from S3 resource");
     debug!("Properties: {:?}", resource);
     let bucket_name = if let Some(name) = resource.get_bucket_name().as_str() {
         if name.is_empty() {
-            warn!("Unable to parse bucket name for S3 resource: {}. Defaulting to resource name", resource_name);
+            warn!(
+                "Unable to parse bucket name for S3 resource: {}. Defaulting to resource name",
+                resource_name
+            );
             resource_name.to_lowercase() // makes lowercase because s3 buckets are lowercase
         } else {
             name.to_string()
         }
     } else {
-        warn!("Unable to find bucket name for S3 resource: {}. Defaulting to resource name", resource_name);
+        warn!(
+            "Unable to find bucket name for S3 resource: {}. Defaulting to resource name",
+            resource_name
+        );
         resource_name.to_lowercase() // makes lowercase because s3 buckets are lowercase
     };
 
@@ -126,7 +144,10 @@ fn create_infrastructure_from_s3_resource(resource: &Bucket, resource_name: &str
                 if let Some(queue_name) = queue_val {
                     new_infrastructure.add_queue_to_triggers(queue_name.to_string());
                 } else {
-                    warn!("Unable to parse queue name for S3 bucket: {}. Skipping", bucket_name);
+                    warn!(
+                        "Unable to parse queue name for S3 bucket: {}. Skipping",
+                        bucket_name
+                    );
                 }
             }
         }
