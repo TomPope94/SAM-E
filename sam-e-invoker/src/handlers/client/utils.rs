@@ -1,7 +1,7 @@
 use std::collections::HashMap;
 
 use crate::data::store::{Invocation, InvocationQueue, Status, Store};
-use sam_e_types::config::{lambda::{EventProperties, EventType, Event}, Lambda};
+use sam_e_types::config::{lambda::{EventProperties, Event}, Lambda};
 
 use anyhow::Result;
 use aws_lambda_events::apigw::{
@@ -12,7 +12,7 @@ use axum::{
     http::{HeaderMap, HeaderName, HeaderValue, Method},
 };
 use tokio::time::{sleep, Duration};
-use tracing::{debug, info, trace};
+use tracing::{debug, info, trace, warn};
 use uuid::Uuid;
 
 pub fn write_invocation_to_store(
@@ -112,26 +112,26 @@ fn remove_base_path(path: &str, base_path: &Option<&String>) -> String {
 pub fn find_matched_lambda(lambdas: &Vec<&Lambda>, method: &str, prepended_path: &str) -> Result<(Lambda, Event)> {
     for lambda in lambdas {
         for event in lambda.get_events() {
-            if let EventType::Api = event.get_event_type() {
-                if let Some(props) = event.get_properties() {
-                    match props {
-                        EventProperties::Api(api_props) => {
-                            let route_filter = if let Ok(route_match) = api_props.get_route_regex().is_match(&prepended_path) {
-                                route_match
-                            } else {
-                                false
-                            };
+            let Some(event_props) = event.get_properties() else {
+                warn!("No event properties found for event: {:?}", event);
+                continue;
+            };
+            match event_props {
+                EventProperties::Api(api_props) => {
+                    let route_filter = if let Ok(route_match) = api_props.get_route_regex().is_match(&prepended_path) {
+                        route_match
+                    } else {
+                        false
+                    };
 
-                            let method_filter =
-                                ["ANY", &method.to_uppercase()].contains(&api_props.get_method().to_uppercase().as_str());
+                    let method_filter =
+                        ["ANY", &method.to_uppercase()].contains(&api_props.get_method().to_uppercase().as_str());
 
-                            if route_filter && method_filter {
-                                return Ok((lambda.to_owned().clone(), event.to_owned()));
-                            }
-                        }
-                        _ => {}
+                    if route_filter && method_filter {
+                        return Ok((lambda.to_owned().clone(), event.to_owned()));
                     }
                 }
+                _ => {}
             }
         }
     }
@@ -166,8 +166,8 @@ pub fn create_api_request(
         is_base64_encoded: false,
         multi_value_headers: Default::default(),
         multi_value_query_string_parameters: Default::default(),
-        // path: Some(path.to_owned()),
-        path: Some(resource_path.to_owned()),
+        path: Some(path.to_owned()),
+        // path: Some(resource_path.to_owned()),
         path_parameters: vec![resource_path.to_owned()]
             .iter()
             .map(|path| ("path".to_owned(), path.to_owned()))

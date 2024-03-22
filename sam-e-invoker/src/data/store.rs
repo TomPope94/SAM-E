@@ -173,7 +173,7 @@ impl Store {
         let region = Region::new("eu-west-2");
 
         let profile_provider = ProfileFileCredentialsProvider::builder()
-            .profile_name("staging-mfa")
+            .profile_name("staging-mfa") //TODO: This should be configurable
             .build();
 
         let config = aws_config::defaults(BehaviorVersion::v2023_11_09())
