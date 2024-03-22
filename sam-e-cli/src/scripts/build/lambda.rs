@@ -1,6 +1,13 @@
 use anyhow::Result;
 use sam_e_types::{
-    cloudformation::{resource::{self, ResourceType, Function, event::{EventType, ApiEvent, SqsEvent}}, Resource},
+    cloudformation::{
+        resource::{
+            self,
+            event::{ApiEvent, EventType, SqsEvent},
+            Function, ResourceType,
+        },
+        Resource,
+    },
     config::lambda::{self, Event, Lambda},
 };
 use std::collections::HashMap;
@@ -18,7 +25,8 @@ pub fn get_lambdas_from_resources(resources: &HashMap<String, Resource>) -> Resu
             ResourceType::Function => {
                 trace!("Found a function!");
                 trace!("Function Props: {:#?}", resource.properties);
-                let properties_res = serde_yaml::from_value::<Function>(resource.properties.clone());
+                let properties_res =
+                    serde_yaml::from_value::<Function>(resource.properties.clone());
                 let properties = match properties_res {
                     Ok(properties) => {
                         debug!("Properties: {:?}", properties);
@@ -26,7 +34,10 @@ pub fn get_lambdas_from_resources(resources: &HashMap<String, Resource>) -> Resu
                     }
                     Err(e) => {
                         error!("Error parsing function properties: {}", e);
-                        warn!("Unable to parse function properties for: {}. Skipping", resource_name);
+                        warn!(
+                            "Unable to parse function properties for: {}. Skipping",
+                            resource_name
+                        );
                         continue;
                     }
                 };
@@ -108,8 +119,11 @@ pub fn get_lambdas_from_resources(resources: &HashMap<String, Resource>) -> Resu
                     })
                     .collect();
 
-                let env_vars: HashMap<String, String> = if let Some(function_env) = properties.get_environment() {
-                    function_env.get_environment_vars()
+                let env_vars: HashMap<String, String> = if let Some(function_env) =
+                    properties.get_environment()
+                {
+                    function_env
+                        .get_environment_vars()
                         .iter()
                         .map(|(k, v)| (k.to_string(), v.as_str().unwrap_or_default().to_string()))
                         .collect()
@@ -182,12 +196,16 @@ pub fn specify_environment_vars(lambdas: Vec<Lambda>) -> Vec<Lambda> {
 
 /// If a Lambda is linked to an API gateway with a base path, this will be returned as an Option.
 fn get_base_path(api_id: &str, sam_resources: &HashMap<String, Resource>) -> Option<String> {
-    let base_api_resource = sam_resources
-        .iter()
-        .find(|(resource_name, sub_resource)| match sub_resource.resource_type {
+    let base_api_resource = sam_resources.iter().find(|(resource_name, sub_resource)| {
+        match sub_resource.resource_type {
             ResourceType::BasePathMapping => {
-                let Ok(properties) = serde_yaml::from_value::<resource::BasePathMapping>(sub_resource.properties.clone()) else {
-                    warn!("Unable to parse base path mapping properties for: {}. Skipping", resource_name);
+                let Ok(properties) = serde_yaml::from_value::<resource::BasePathMapping>(
+                    sub_resource.properties.clone(),
+                ) else {
+                    warn!(
+                        "Unable to parse base path mapping properties for: {}. Skipping",
+                        resource_name
+                    );
                     return false;
                 };
                 let rest_api_id = properties.get_rest_api_id();
@@ -203,15 +221,21 @@ fn get_base_path(api_id: &str, sam_resources: &HashMap<String, Resource>) -> Opt
                 }
             }
             _ => false,
-        });
+        }
+    });
 
     // This seems like a reduntant check in match. Probably a better way to return the value from
     // iteration above.
     if let Some((resource_name, resource)) = base_api_resource {
         match &resource.resource_type {
             ResourceType::BasePathMapping => {
-                let Ok(properties) = serde_yaml::from_value::<resource::BasePathMapping>(resource.properties.clone()) else {
-                    warn!("Unable to parse base path mapping properties for: {}. Skipping", resource_name);
+                let Ok(properties) = serde_yaml::from_value::<resource::BasePathMapping>(
+                    resource.properties.clone(),
+                ) else {
+                    warn!(
+                        "Unable to parse base path mapping properties for: {}. Skipping",
+                        resource_name
+                    );
                     return None;
                 };
                 let base_path = properties.get_base_path();

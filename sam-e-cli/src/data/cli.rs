@@ -36,27 +36,17 @@ pub enum Command {
     Rebuild,
 
     #[command(
-        about = "Start the SAM-E environment. Will run an Axum API server. Run the generated docker-compose file in separate terminal to complete setup."
+        about = "Start the SAM-E environment. Will prompt you to choose which part of the environment to start."
     )]
-    Start,
+    Start(StartArgs),
+
+    #[command(about = "Stop the SAM-E environment")]
+    Stop,
 }
 
 #[derive(Debug, Args)]
-pub struct BuildArgs {
-    /// The name of SAM template yaml file to search for at current location. If multi is true, will use this name for ALL files. Note: Will search in child directories
-    #[arg(long)]
-    pub template_name: Option<String>,
-
-    /// Boolean for whether there is more than one SAM file. Will default to false
+pub struct StartArgs {
+    /// A flag to run the docker files detached
     #[arg(short, long)]
-    pub multi: bool,
-
-    /// Boolean for whether to use a multi selector to select multiple SAM files. Useful for when
-    /// there are multiple files with different names. Will default to false
-    #[arg(short, long)]
-    pub selector: bool,
-
-    /// Boolean for whether it should overwrite the current SAM-E environment or merge with it (if it exists). Will default to false
-    #[arg(short, long)]
-    pub overwrite: bool,
+    pub detached: bool,
 }
