@@ -9,6 +9,7 @@ pub struct Lambda {
     image: String,
     environment_vars: HashMap<String, String>,
     events: Vec<Event>,
+    template_name: String,
 }
 
 impl Lambda {
@@ -17,12 +18,14 @@ impl Lambda {
         image: String,
         environment_vars: HashMap<String, String>,
         events: Vec<Event>,
+        template_name: &str,
     ) -> Self {
         Self {
             name,
             image,
             environment_vars,
             events,
+            template_name: template_name.to_string(),
         }
     }
 
@@ -52,6 +55,10 @@ impl Lambda {
 
     pub fn get_events(&self) -> &Vec<Event> {
         &self.events
+    }
+
+    pub fn get_template_name(&self) -> &str {
+        &self.template_name
     }
 }
 

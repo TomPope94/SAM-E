@@ -51,7 +51,7 @@ pub fn init() -> anyhow::Result<()> {
     info!("Creating SAM-E config file at: {:?}", sam_e_config_path);
 
     let new_runtime = RuntimeBuilder::new()
-        .with_template_locations(selected_as_str)
+        .with_templates(selected_as_str)
         .build();
 
     let new_config = Config::new(vec![], new_runtime, vec![]);

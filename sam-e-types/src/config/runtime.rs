@@ -1,24 +1,27 @@
+pub mod template;
+
+use template::{Template, TemplateBuilder};
 use serde::{Deserialize, Serialize};
 
 /// Configuration for the local runtime
 #[derive(Debug, Deserialize, Serialize, Clone)]
 pub struct Runtime {
-    template_locations: Vec<String>,
+    templates: Vec<Template>,
     separate_infrastructure: bool,
 }
 
 impl Default for Runtime {
     fn default() -> Self {
         Self {
-            template_locations: vec![], // Default to empty
+            templates: vec![], // Default to empty
             separate_infrastructure: true,
         }
     }
 }
 
 impl Runtime {
-    pub fn get_template_locations(&self) -> &Vec<String> {
-        &self.template_locations
+    pub fn get_templates(&self) -> &Vec<Template> {
+        &self.templates
     }
 
     pub fn get_separate_infrastructure(&self) -> bool {
@@ -27,20 +30,23 @@ impl Runtime {
 }
 
 pub struct RuntimeBuilder {
-    template_locations: Vec<String>,
+    templates: Vec<Template>,
     separate_infrastructure: bool,
 }
 
 impl RuntimeBuilder {
     pub fn new() -> Self {
         Self {
-            template_locations: vec![],
+            templates: vec![],
             separate_infrastructure: true,
         }
     }
 
-    pub fn with_template_locations(mut self, template_locations: Vec<String>) -> Self {
-        self.template_locations = template_locations;
+    pub fn with_templates(mut self, template_locations: Vec<String>) -> Self {
+        for location in template_locations {
+            self.templates.push(TemplateBuilder::new().with_location(location).build());
+        }
+
         self
     }
 
@@ -51,7 +57,7 @@ impl RuntimeBuilder {
 
     pub fn build(self) -> Runtime {
         Runtime {
-            template_locations: self.template_locations,
+            templates: self.templates,
             separate_infrastructure: self.separate_infrastructure,
         }
     }

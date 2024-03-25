@@ -1545,6 +1545,7 @@ dependencies = [
  "fancy-regex",
  "serde",
  "serde_yaml",
+ "uuid",
 ]
 
 [[package]]

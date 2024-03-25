@@ -11,12 +11,42 @@ use crate::scripts::{
     init,
 };
 
-use sam_e_types::config::Config;
+use sam_e_types::{
+    config::Config,
+    cloudformation::Resource,
+};
 
+use serde::Deserialize;
 use std::{env, fs};
 use tracing::{debug, error, info};
 
 const SAM_E_DIRECTORY: &str = ".sam-e";
+
+// TODO: Should probably find a better home for this...
+#[derive(Debug, Deserialize)]
+pub struct ResourceWithTemplate {
+    template_name: String,
+
+    #[serde(flatten)]
+    resources: Resource,
+}
+
+impl ResourceWithTemplate {
+    fn new(resources: Resource, template_name: &str) -> Self {
+        Self {
+            resources,
+            template_name: template_name.to_string(),
+        }
+    }
+
+    fn get_template_name(&self) -> &str {
+        &self.template_name
+    }
+
+    fn get_resources(&self) -> &Resource {
+        &self.resources
+    }
+}
 
 pub fn build() -> anyhow::Result<()> {
     info!("Now building the SAM-E environment...");
@@ -45,7 +75,7 @@ pub fn build() -> anyhow::Result<()> {
         fs::read_to_string(format!("{}/sam-e-config.yaml", sam_e_directory_path))?;
     let current_config: Config = serde_yaml::from_str(&current_config_raw)?;
 
-    let template_locations = current_config.get_runtime().get_template_locations();
+    let template_locations = current_config.get_runtime().get_templates();
 
     let resources = parse_templates_into_resources(template_locations)?;
     debug!("Resources: {:#?}", resources);
