@@ -35,8 +35,9 @@ pub async fn request_handler(
     }
 
     let prepended_path = format!("/{}", path); // Axum doesn't prepend the path with a slash
-    
-    let matched_lambda_and_event = find_matched_lambda(&api_lambdas, &method.to_string(), &prepended_path);
+
+    let matched_lambda_and_event =
+        find_matched_lambda(&api_lambdas, &method.to_string(), &prepended_path);
     if matched_lambda_and_event.is_err() {
         error!("No matching Lambda found");
         return "No matching Lambda found".into_response();
@@ -72,12 +73,9 @@ pub async fn request_handler(
         api_state.get_store(),
     );
 
-    let processed_invocation = read_invocation_from_store(
-        api_state.get_store(),
-        matched_lambda.get_name(),
-        request_id,
-    )
-    .await;
+    let processed_invocation =
+        read_invocation_from_store(api_state.get_store(), matched_lambda.get_name(), request_id)
+            .await;
 
     let res_headers = processed_invocation.get_response_headers();
     let res_body = processed_invocation.get_response();
@@ -112,7 +110,7 @@ pub async fn request_handler(
                         } else {
                             text.clone().into_response()
                         }
-                    },
+                    }
                     encodings::Body::Binary(binary) => binary.clone().into_response(),
                     encodings::Body::Empty => "No Response body found".into_response(),
                 }

@@ -87,7 +87,10 @@ pub async fn poll_queue_for_invoke(queue: Infrastructure, store: Store) {
 
                                 if let Some(container_names) = container_names {
                                     for container in container_names {
-                                        debug!("Adding SQS invocation for container: {}", container);
+                                        debug!(
+                                            "Adding SQS invocation for container: {}",
+                                            container
+                                        );
                                         let _ = write_invocation_to_store(
                                             invocation.clone(),
                                             container,
@@ -105,10 +108,15 @@ pub async fn poll_queue_for_invoke(queue: Infrastructure, store: Store) {
 
                                         match delete_message {
                                             Ok(_) => {
-                                                debug!("Successfully deleted message from SQS queue");
+                                                debug!(
+                                                    "Successfully deleted message from SQS queue"
+                                                );
                                             }
                                             Err(e) => {
-                                                error!("Failed to delete message from SQS queue: {}", e);
+                                                error!(
+                                                    "Failed to delete message from SQS queue: {}",
+                                                    e
+                                                );
                                             }
                                         }
                                     }
@@ -151,9 +159,7 @@ async fn check_queue_exists(queue_name: &str, client: &Client) -> bool {
     debug!("Check queue result: {:?}", check_queue);
 
     match check_queue {
-        Ok(_) => {
-            true
-        },
+        Ok(_) => true,
         Err(_e) => {
             warn!("Queue not found. Will create before polling");
             false

@@ -1,7 +1,7 @@
 use std::collections::HashMap;
 
 use crate::data::store::{Invocation, InvocationQueue, Status, Store};
-use sam_e_types::config::{lambda::{EventProperties, Event}, Lambda};
+use sam_e_types::config::lambda::{Event, EventProperties, Lambda};
 
 use anyhow::Result;
 use aws_lambda_events::apigw::{
@@ -109,7 +109,11 @@ fn remove_base_path(path: &str, base_path: &Option<&String>) -> String {
     }
 }
 
-pub fn find_matched_lambda(lambdas: &Vec<&Lambda>, method: &str, prepended_path: &str) -> Result<(Lambda, Event)> {
+pub fn find_matched_lambda(
+    lambdas: &Vec<&Lambda>,
+    method: &str,
+    prepended_path: &str,
+) -> Result<(Lambda, Event)> {
     for lambda in lambdas {
         for event in lambda.get_events() {
             let Some(event_props) = event.get_properties() else {
@@ -118,14 +122,16 @@ pub fn find_matched_lambda(lambdas: &Vec<&Lambda>, method: &str, prepended_path:
             };
             match event_props {
                 EventProperties::Api(api_props) => {
-                    let route_filter = if let Ok(route_match) = api_props.get_route_regex().is_match(&prepended_path) {
+                    let route_filter = if let Ok(route_match) =
+                        api_props.get_route_regex().is_match(&prepended_path)
+                    {
                         route_match
                     } else {
                         false
                     };
 
-                    let method_filter =
-                        ["ANY", &method.to_uppercase()].contains(&api_props.get_method().to_uppercase().as_str());
+                    let method_filter = ["ANY", &method.to_uppercase()]
+                        .contains(&api_props.get_method().to_uppercase().as_str());
 
                     if route_filter && method_filter {
                         return Ok((lambda.to_owned().clone(), event.to_owned()));

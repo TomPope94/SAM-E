@@ -8,7 +8,7 @@ use aws_lambda_events::{
 use aws_sdk_sqs::{config::Region, Client};
 use chrono::{DateTime, Local};
 use parking_lot::RwLock;
-use sam_e_types::config::Lambda;
+use sam_e_types::config::lambda::Lambda;
 use serde::{Deserialize, Serialize};
 use tracing::debug;
 use uuid::Uuid;

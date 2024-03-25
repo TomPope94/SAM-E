@@ -82,7 +82,11 @@ pub async fn request_handler(
     // Return the response
     if invocation.is_ok() && invocation_to_process.is_some() {
         let invocation_data = invocation_to_process.unwrap();
-        let dt = chrono::Local::now() + chrono::Duration::days(1);
+        let Some(time_delta) = chrono::Duration::try_days(1) else {
+            panic!("Failed to create time delta");
+        };
+
+        let dt = chrono::Local::now() + time_delta;
 
         let event_request = invocation_data.get_request();
 
