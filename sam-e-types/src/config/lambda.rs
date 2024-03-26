@@ -1,5 +1,5 @@
 use serde::{Deserialize, Serialize};
-use std::collections::HashMap;
+use std::collections::BTreeMap;
 use fancy_regex::Regex;
 
 /// A Lambda function as specified in the SAM template - will be created as a separate container
@@ -7,7 +7,7 @@ use fancy_regex::Regex;
 pub struct Lambda {
     name: String,
     image: String,
-    environment_vars: HashMap<String, String>,
+    environment_vars: BTreeMap<String, String>,
     events: Vec<Event>,
     template_name: String,
 }
@@ -16,7 +16,7 @@ impl Lambda {
     pub fn new(
         name: String,
         image: String,
-        environment_vars: HashMap<String, String>,
+        environment_vars: BTreeMap<String, String>,
         events: Vec<Event>,
         template_name: &str,
     ) -> Self {
@@ -37,15 +37,15 @@ impl Lambda {
         &self.image
     }
 
-    pub fn set_environment_vars(&mut self, environment_vars: HashMap<String, String>) {
+    pub fn set_environment_vars(&mut self, environment_vars: BTreeMap<String, String>) {
         self.environment_vars = environment_vars;
     }
 
-    pub fn get_environment_vars(&self) -> &HashMap<String, String> {
+    pub fn get_environment_vars(&self) -> &BTreeMap<String, String> {
         &self.environment_vars
     }
     
-    pub fn get_environment_vars_as_value(&self) -> HashMap<String, serde_yaml::Value> {
+    pub fn get_environment_vars_as_value(&self) -> BTreeMap<String, serde_yaml::Value> {
         self.environment_vars
             .iter()
             .map(|(key, value)| {

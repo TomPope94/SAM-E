@@ -1,16 +1,35 @@
 use serde::{Deserialize, Serialize};
 use std::{
-    collections::HashMap,
+    collections::BTreeMap,
     fmt
 };
 
 use crate::cloudformation::Resource;
 
+// NOTE: all template keys must be parsed so that when we update the template via serde, we don't lose any
+// from the original, manually constructed template
 #[derive(Deserialize, Debug, Serialize)]
 #[serde(rename_all = "PascalCase")]
 pub struct Template {
     // parameters: Option<HashMap<String, Parameter>>,
-    pub resources: HashMap<String, Resource>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    transform: Option<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    #[serde(rename = "AWSTemplateFormatVersion")]
+    format_version: Option<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    parameters: Option<serde_yaml::Value>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    conditions: Option<serde_yaml::Value>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    metadata: Option<serde_yaml::Value>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    description: Option<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    globals: Option<serde_yaml::Value>,
+    pub resources: BTreeMap<String, Resource>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    outputs: Option<serde_yaml::Value>,
 }
 
 #[derive(Deserialize, Serialize, Debug, PartialEq, Eq)]

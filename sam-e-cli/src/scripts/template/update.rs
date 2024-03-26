@@ -6,7 +6,7 @@ use sam_e_types::{
     config::{lambda::Lambda, Config},
 };
 
-use std::{env, fs, path::Path};
+use std::{env, fs, path::Path, collections::BTreeMap};
 use tracing::{debug, error, info};
 
 use crate::scripts::build::{lambda::get_lambdas_from_resources, template::build_template};
@@ -55,17 +55,38 @@ pub fn update() -> anyhow::Result<()> {
             .expect("Lambda not found in template");
         let mut matching_lambda_env_vars = matching_lambda.get_environment_vars().clone();
 
-        for (key, value) in env_vars {
-            if !matching_lambda_env_vars.contains_key(key) {
+        // Checks if local environment has added a variable that isn't in the template
+        let env_vars_additions = env_vars.into_iter().filter(|(key, _)| {
+            !matching_lambda_env_vars.contains_key(*key)
+        }).collect::<BTreeMap<_, _>>();
+
+        // Checks if the template has a variable that has been removed in the local environment
+        let env_vars_removals = matching_lambda_env_vars.clone().into_keys().filter(|key| {
+            !env_vars.contains_key(key)
+        }).collect::<Vec<String>>();
+
+        for key in matching_lambda_env_vars.clone().into_keys() {
+            if env_vars_removals.contains(&key) {
                 info!(
-                    "Environment variable key '{}' not found in template for lambda '{}'",
+                    "Environment variable key '{}' not found in local lambda '{}'",
                     key,
                     lambda.get_name()
                 );
-                debug!("Inserting key '{}' with value '{}'", key, value);
+                debug!("Removing key '{}' from template", key);
 
-                matching_lambda_env_vars.insert(key.to_string(), value.to_string());
+                matching_lambda_env_vars.remove(&key);
             }
+        }
+
+        for (key, value) in env_vars_additions {
+            info!(
+                "Environment variable key '{}' not found in template '{}'",
+                key,
+                matched_template.get_name()
+            );
+            debug!("Adding key '{}' to template", key);
+
+            matching_lambda_env_vars.insert(key.to_string(), value.to_string());
         }
 
         matching_lambda.set_environment_vars(matching_lambda_env_vars);
