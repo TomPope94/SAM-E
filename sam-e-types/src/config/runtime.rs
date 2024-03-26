@@ -1,7 +1,7 @@
 pub mod template;
 
-use template::{Template, TemplateBuilder};
 use serde::{Deserialize, Serialize};
+use template::{Template, TemplateBuilder};
 
 /// Configuration for the local runtime
 #[derive(Debug, Deserialize, Serialize, Clone)]
@@ -44,7 +44,8 @@ impl RuntimeBuilder {
 
     pub fn with_templates(mut self, template_locations: Vec<String>) -> Self {
         for location in template_locations {
-            self.templates.push(TemplateBuilder::new().with_location(location).build());
+            self.templates
+                .push(TemplateBuilder::new().with_location(location).build());
         }
 
         self
@@ -62,5 +63,3 @@ impl RuntimeBuilder {
         }
     }
 }
-
-

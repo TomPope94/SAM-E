@@ -1,15 +1,11 @@
-use sam_e_types::{
-    cloudformation::{
-        resource::{Function, ResourceType},
-        Template,
-    },
-    config::{lambda::Lambda, Config},
-};
+use sam_e_types::config::Config;
 
-use std::{env, fs, path::Path, collections::BTreeMap};
+use std::{env, fs};
 use tracing::{debug, error, info};
 
-use crate::scripts::build::{lambda::get_lambdas_from_resources, template::build_template};
+use crate::scripts::template::utils::{
+    get_env_var_additions, get_env_var_removals, get_template_lambda, update_template_file,
+};
 
 const SAM_E_DIRECTORY: &str = ".sam-e";
 
@@ -35,82 +31,27 @@ pub fn update() -> anyhow::Result<()> {
     let lambdas = config.get_lambdas();
     let templates = config.get_runtime().get_templates();
 
-    // Go through each of the lambdas and check environment variable keys match what's in the
-    // template
     for lambda in lambdas {
-        let env_vars = lambda.get_environment_vars();
-        let template = lambda.get_template_name();
+        let mut template_lambda = get_template_lambda(&lambda, &templates)?;
 
-        let matched_template = templates
-            .iter()
-            .find(|t| t.get_name() == template)
-            .expect("Template not found");
+        let local_additions = get_env_var_additions(lambda, &template_lambda);
+        let local_removals = get_env_var_removals(lambda, &template_lambda);
 
-        let resources_from_template = build_template(matched_template)?;
-        let mut lambdas_from_template = get_lambdas_from_resources(&resources_from_template)?;
-
-        let matching_lambda: &mut Lambda = lambdas_from_template
-            .iter_mut()
-            .find(|l| l.get_name() == lambda.get_name())
-            .expect("Lambda not found in template");
-        let mut matching_lambda_env_vars = matching_lambda.get_environment_vars().clone();
-
-        // Checks if local environment has added a variable that isn't in the template
-        let env_vars_additions = env_vars.into_iter().filter(|(key, _)| {
-            !matching_lambda_env_vars.contains_key(*key)
-        }).collect::<BTreeMap<_, _>>();
-
-        // Checks if the template has a variable that has been removed in the local environment
-        let env_vars_removals = matching_lambda_env_vars.clone().into_keys().filter(|key| {
-            !env_vars.contains_key(key)
-        }).collect::<Vec<String>>();
-
-        for key in matching_lambda_env_vars.clone().into_keys() {
-            if env_vars_removals.contains(&key) {
-                info!(
-                    "Environment variable key '{}' not found in local lambda '{}'",
-                    key,
-                    lambda.get_name()
-                );
-                debug!("Removing key '{}' from template", key);
-
-                matching_lambda_env_vars.remove(&key);
+        if let Some(local_additions) = local_additions {
+            debug!("Local additions: {:?}", local_additions);
+            for (key, value) in local_additions.iter() {
+                template_lambda.add_environment_var(key.to_string(), value.to_string());
             }
         }
 
-        for (key, value) in env_vars_additions {
-            info!(
-                "Environment variable key '{}' not found in template '{}'",
-                key,
-                matched_template.get_name()
-            );
-            debug!("Adding key '{}' to template", key);
-
-            matching_lambda_env_vars.insert(key.to_string(), value.to_string());
+        if let Some(local_removals) = local_removals {
+            debug!("Local removals: {:?}", local_removals);
+            for key in local_removals {
+                template_lambda.remove_environment_var(&key);
+            }
         }
 
-        matching_lambda.set_environment_vars(matching_lambda_env_vars);
-
-        let template_path = Path::new(matched_template.get_location());
-        let path_as_str = template_path.to_str().unwrap();
-        let yaml_file = fs::read_to_string(path_as_str)?;
-        let mut template_yaml: Template = serde_yaml::from_str(&yaml_file)?;
-
-        for (key, value) in template_yaml.resources.iter_mut() {
-            if value.resource_type == ResourceType::Function && matching_lambda.get_name() == key {
-                let mut function: Function = serde_yaml::from_value(value.properties.clone()).unwrap();
-                function
-                    .get_environment_mut()
-                    .as_mut()
-                    .unwrap()
-                    .set_environment_vars(matching_lambda.get_environment_vars_as_value());
-
-                value.properties = serde_yaml::to_value(function).unwrap();
-            };
-        }
-
-        let updated_yaml = serde_yaml::to_string(&template_yaml)?;
-        fs::write(path_as_str, updated_yaml)?;
+        update_template_file(&template_lambda, templates)?;
     }
 
     Ok(())

@@ -1,10 +1,7 @@
-use std::collections::BTreeMap;
+use crate::cloudformation::resource::Event;
 use serde::{Deserialize, Serialize};
-use crate::cloudformation::{
-    resource::Event,
-    // template::CloudFormationValue as Value,
-};
 use serde_yaml::Value;
+use std::collections::HashMap;
 
 #[derive(Deserialize, Serialize, Debug, PartialEq, Eq)]
 #[serde(rename_all = "PascalCase")]
@@ -14,7 +11,7 @@ pub struct Function {
     image_uri: Option<Value>,
     role: Option<Value>,
     timeout: Option<Value>,
-    events: BTreeMap<String, Event>,
+    events: HashMap<String, Event>,
     environment: Option<Environment>,
 }
 
@@ -27,7 +24,7 @@ impl Function {
         &self.image_uri
     }
 
-    pub fn get_events(&self) -> &BTreeMap<String, Event> {
+    pub fn get_events(&self) -> &HashMap<String, Event> {
         &self.events
     }
 
@@ -51,21 +48,21 @@ impl Function {
 #[derive(Deserialize, Serialize, Debug, PartialEq, Eq)]
 #[serde(rename_all = "PascalCase")]
 pub struct Environment {
-    variables: BTreeMap<String, Value>,
+    variables: HashMap<String, Value>,
 }
 
 impl Environment {
     pub fn default() -> Environment {
         Environment {
-            variables: BTreeMap::new(),
+            variables: HashMap::new(),
         }
     }
 
-    pub fn get_environment_vars(&self) -> &BTreeMap<String, Value> {
+    pub fn get_environment_vars(&self) -> &HashMap<String, Value> {
         &self.variables
     }
 
-    pub fn set_environment_vars(&mut self, env_vars: BTreeMap<String, Value>) {
+    pub fn set_environment_vars(&mut self, env_vars: HashMap<String, Value>) {
         self.variables = env_vars;
     }
 }

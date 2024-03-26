@@ -1,4 +1,5 @@
 mod update;
+mod utils;
 mod validate;
 
 use crate::data::cli::TemplateCommand;

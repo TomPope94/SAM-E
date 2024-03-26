@@ -1,13 +1,13 @@
-use serde::{Deserialize, Serialize};
-use std::collections::BTreeMap;
 use fancy_regex::Regex;
+use serde::{Deserialize, Serialize};
+use std::collections::HashMap;
 
 /// A Lambda function as specified in the SAM template - will be created as a separate container
 #[derive(Debug, Deserialize, Serialize, Clone)]
 pub struct Lambda {
     name: String,
     image: String,
-    environment_vars: BTreeMap<String, String>,
+    environment_vars: HashMap<String, String>,
     events: Vec<Event>,
     template_name: String,
 }
@@ -16,7 +16,7 @@ impl Lambda {
     pub fn new(
         name: String,
         image: String,
-        environment_vars: BTreeMap<String, String>,
+        environment_vars: HashMap<String, String>,
         events: Vec<Event>,
         template_name: &str,
     ) -> Self {
@@ -37,25 +37,27 @@ impl Lambda {
         &self.image
     }
 
-    pub fn set_environment_vars(&mut self, environment_vars: BTreeMap<String, String>) {
+    pub fn set_environment_vars(&mut self, environment_vars: HashMap<String, String>) {
         self.environment_vars = environment_vars;
     }
 
-    pub fn get_environment_vars(&self) -> &BTreeMap<String, String> {
+    pub fn get_environment_vars(&self) -> &HashMap<String, String> {
         &self.environment_vars
     }
-    
-    pub fn get_environment_vars_as_value(&self) -> BTreeMap<String, serde_yaml::Value> {
+
+    pub fn get_environment_vars_as_value(&self) -> HashMap<String, serde_yaml::Value> {
         self.environment_vars
             .iter()
-            .map(|(key, value)| {
-                (key.clone(), serde_yaml::Value::String(value.clone()))
-            })
+            .map(|(key, value)| (key.clone(), serde_yaml::Value::String(value.clone())))
             .collect()
     }
 
     pub fn add_environment_var(&mut self, key: String, value: String) {
         self.environment_vars.insert(key, value);
+    }
+
+    pub fn remove_environment_var(&mut self, key: &str) {
+        self.environment_vars.remove(key);
     }
 
     pub fn add_event(&mut self, event: Event) {

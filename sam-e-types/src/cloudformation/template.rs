@@ -1,14 +1,11 @@
 use serde::{Deserialize, Serialize};
-use std::{
-    collections::BTreeMap,
-    fmt
-};
+use std::{collections::HashMap, fmt};
 
 use crate::cloudformation::Resource;
 
 // NOTE: all template keys must be parsed so that when we update the template via serde, we don't lose any
 // from the original, manually constructed template
-#[derive(Deserialize, Debug, Serialize)]
+#[derive(Deserialize, Debug, Serialize, Clone)]
 #[serde(rename_all = "PascalCase")]
 pub struct Template {
     // parameters: Option<HashMap<String, Parameter>>,
@@ -27,7 +24,7 @@ pub struct Template {
     description: Option<String>,
     #[serde(skip_serializing_if = "Option::is_none")]
     globals: Option<serde_yaml::Value>,
-    pub resources: BTreeMap<String, Resource>,
+    pub resources: HashMap<String, Resource>,
     #[serde(skip_serializing_if = "Option::is_none")]
     outputs: Option<serde_yaml::Value>,
 }
@@ -66,7 +63,9 @@ impl fmt::Display for CloudFormationValue {
             CloudFormationValue::String(val) => write!(f, "{}", val),
             CloudFormationValue::Number(val) => write!(f, "{}", val),
             CloudFormationValue::Ref(ref_val) => write!(f, "{}", ref_val.replace(".Arn", "")),
-            CloudFormationValue::Other(value) => write!(f, "{}", value.as_str().expect("VALUE INCORRECT")),
+            CloudFormationValue::Other(value) => {
+                write!(f, "{}", value.as_str().expect("VALUE INCORRECT"))
+            }
         }
     }
 }

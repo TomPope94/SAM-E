@@ -8,7 +8,7 @@ use sam_e_types::{
     },
     config::lambda::{self, Event, Lambda},
 };
-use std::collections::{HashMap, BTreeMap};
+use std::collections::HashMap;
 use tracing::{debug, error, trace, warn};
 
 /// Takes a hashmap of the resources within CloudFormation template and returns each of the Lambdas
@@ -122,7 +122,7 @@ pub fn get_lambdas_from_resources(
                     })
                     .collect();
 
-                let env_vars: BTreeMap<String, String> = if let Some(function_env) =
+                let env_vars: HashMap<String, String> = if let Some(function_env) =
                     properties.get_environment()
                 {
                     function_env
@@ -131,7 +131,7 @@ pub fn get_lambdas_from_resources(
                         .map(|(k, v)| (k.to_string(), v.as_str().unwrap_or_default().to_string()))
                         .collect()
                 } else {
-                    BTreeMap::new()
+                    HashMap::new()
                 };
 
                 let lambda = Lambda::new(
@@ -176,7 +176,7 @@ pub fn specify_environment_vars(lambdas: Vec<Lambda>) -> Vec<Lambda> {
 
     for lambda in lambdas.iter_mut() {
         let environment_vars = lambda.get_environment_vars();
-        let environment_vars_input: BTreeMap<String, String> = environment_vars
+        let environment_vars_input: HashMap<String, String> = environment_vars
             .iter()
             .map(|(k, v)| {
                 let value = dialoguer::Input::<String>::new()

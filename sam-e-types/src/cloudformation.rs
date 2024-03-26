@@ -1,5 +1,5 @@
-pub mod template;
 pub mod resource;
+pub mod template;
 // pub mod parameter;
 
 pub use template::Template;
