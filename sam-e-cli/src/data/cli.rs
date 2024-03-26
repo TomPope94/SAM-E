@@ -30,6 +30,9 @@ pub enum Command {
     #[command(about = "Build the SAM-E environment using a SAM template.yaml file")]
     Build,
 
+    #[command(about = "Deploy the SAM-E environment. A wrapper for 'sam deploy'")]
+    Deploy,
+
     #[command(
         about = "Rebuild the SAM-E environment using just the Config (allowing for manual changes). Will not rebuild from the SAM template file"
     )]
