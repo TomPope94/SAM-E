@@ -1,11 +1,10 @@
-use anyhow::Result;
 use crate::scripts::build::ResourceWithTemplate;
+use anyhow::Result;
 use sam_e_types::{
-    cloudformation::
-        resource::{
-            self,
-            event::{ApiEvent, EventType, SqsEvent},
-            Function, ResourceType,
+    cloudformation::resource::{
+        self,
+        event::{ApiEvent, EventType, SqsEvent},
+        Function, ResourceType,
     },
     config::lambda::{self, Event, Lambda},
 };
@@ -14,12 +13,17 @@ use tracing::{debug, error, trace, warn};
 
 /// Takes a hashmap of the resources within CloudFormation template and returns each of the Lambdas
 /// specified in a vector.
-pub fn get_lambdas_from_resources(resources: &HashMap<String, ResourceWithTemplate>) -> Result<Vec<Lambda>> {
+pub fn get_lambdas_from_resources(
+    resources: &HashMap<String, ResourceWithTemplate>,
+) -> Result<Vec<Lambda>> {
     let mut lambdas = vec![];
 
     for (resource_name, resource) in resources.iter() {
         trace!("Resource name: {}", resource_name);
-        trace!("Resource Type: {:?}", resource.get_resources().resource_type);
+        trace!(
+            "Resource Type: {:?}",
+            resource.get_resources().resource_type
+        );
         match &resource.get_resources().resource_type {
             ResourceType::Function => {
                 trace!("Found a function!");
@@ -135,7 +139,7 @@ pub fn get_lambdas_from_resources(resources: &HashMap<String, ResourceWithTempla
                     image_uri.to_string(),
                     env_vars,
                     events_vec,
-                    resource.get_template_name()
+                    resource.get_template_name(),
                 );
                 lambdas.push(lambda);
             }
@@ -195,7 +199,10 @@ pub fn specify_environment_vars(lambdas: Vec<Lambda>) -> Vec<Lambda> {
 }
 
 /// If a Lambda is linked to an API gateway with a base path, this will be returned as an Option.
-fn get_base_path(api_id: &str, sam_resources: &HashMap<String, ResourceWithTemplate>) -> Option<String> {
+fn get_base_path(
+    api_id: &str,
+    sam_resources: &HashMap<String, ResourceWithTemplate>,
+) -> Option<String> {
     let base_api_resource = sam_resources.iter().find(|(resource_name, sub_resource)| {
         match sub_resource.get_resources().resource_type {
             ResourceType::BasePathMapping => {

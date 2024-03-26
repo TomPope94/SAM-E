@@ -11,10 +11,7 @@ use crate::scripts::{
     init,
 };
 
-use sam_e_types::{
-    config::Config,
-    cloudformation::Resource,
-};
+use sam_e_types::{cloudformation::Resource, config::Config};
 
 use serde::Deserialize;
 use std::{env, fs};

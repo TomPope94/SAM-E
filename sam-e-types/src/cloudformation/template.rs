@@ -1,4 +1,4 @@
-use serde::Deserialize;
+use serde::{Deserialize, Serialize};
 use std::{
     collections::HashMap,
     fmt
@@ -6,14 +6,14 @@ use std::{
 
 use crate::cloudformation::Resource;
 
-#[derive(Deserialize, Debug)]
+#[derive(Deserialize, Debug, Serialize)]
 #[serde(rename_all = "PascalCase")]
 pub struct Template {
     // parameters: Option<HashMap<String, Parameter>>,
     pub resources: HashMap<String, Resource>,
 }
 
-#[derive(Deserialize, Debug, PartialEq, Eq)]
+#[derive(Deserialize, Serialize, Debug, PartialEq, Eq)]
 pub enum CloudFormationValue {
     Ref(String),
     // #[serde(rename_all = "PascalCase")]

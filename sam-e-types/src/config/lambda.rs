@@ -44,6 +44,19 @@ impl Lambda {
     pub fn get_environment_vars(&self) -> &HashMap<String, String> {
         &self.environment_vars
     }
+    
+    pub fn get_environment_vars_as_value(&self) -> HashMap<String, serde_yaml::Value> {
+        self.environment_vars
+            .iter()
+            .map(|(key, value)| {
+                (key.clone(), serde_yaml::Value::String(value.clone()))
+            })
+            .collect()
+    }
+
+    pub fn add_environment_var(&mut self, key: String, value: String) {
+        self.environment_vars.insert(key, value);
+    }
 
     pub fn add_event(&mut self, event: Event) {
         self.events.push(event);

@@ -42,6 +42,9 @@ pub enum Command {
 
     #[command(about = "Stop the SAM-E environment")]
     Stop,
+
+    #[clap(subcommand)]
+    Template(TemplateCommand),
 }
 
 #[derive(Debug, Args)]
@@ -49,4 +52,13 @@ pub struct StartArgs {
     /// A flag to run the docker files detached
     #[arg(short, long)]
     pub detached: bool,
+}
+
+#[derive(Debug, Subcommand)]
+pub enum TemplateCommand {
+    #[command(about = "TODO: Validate the SAM-E template.yaml file")]
+    Validate,
+
+    #[command(about = "Update the SAM-E template.yaml file")]
+    Update,
 }

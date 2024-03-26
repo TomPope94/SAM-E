@@ -1,6 +1,6 @@
-use serde::Deserialize;
+use serde::{Deserialize, Serialize};
 
-#[derive(Deserialize, Debug, PartialEq, Eq)]
+#[derive(Deserialize, Serialize, Debug, PartialEq, Eq)]
 pub enum ResourceType {
     #[serde(rename = "AWS::Serverless::Function")]
     Function,
@@ -18,7 +18,7 @@ pub enum ResourceType {
     Other(serde_yaml::Value),
 }
 
-#[derive(Deserialize, Debug, PartialEq, Eq)]
+#[derive(Deserialize, Serialize, Debug, PartialEq, Eq)]
 #[serde(rename_all = "PascalCase")]
 pub struct Resource {
     #[serde(rename = "Type")]

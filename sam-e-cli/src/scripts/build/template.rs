@@ -8,11 +8,10 @@ use anyhow::Result;
 use fancy_regex::Regex;
 use tracing::{debug, trace};
 
-use sam_e_types::{
-    cloudformation::Template,
-    config::runtime::template::Template as ConfigTemplate,
-};
 use crate::scripts::build::ResourceWithTemplate;
+use sam_e_types::{
+    cloudformation::Template, config::runtime::template::Template as ConfigTemplate,
+};
 
 /// Takes the vec of template locations (i.e. file paths to the YAML files) and returns a hashmap
 /// of the resources section of the CloudFormation template.
@@ -34,7 +33,9 @@ pub fn parse_templates_into_resources(
 /// Builds the template for an individual CloudFormation template returning a hashmap of just
 /// the resources section. Starts by reading the file to a string before passing to serde_yaml to
 /// be parsed into the HashMap.
-fn build_template(template: &ConfigTemplate) -> anyhow::Result<HashMap<String, ResourceWithTemplate>> {
+pub fn build_template(
+    template: &ConfigTemplate,
+) -> anyhow::Result<HashMap<String, ResourceWithTemplate>> {
     debug!("Building template: {:?}", template.get_name());
     let template_path = Path::new(template.get_location());
 
@@ -50,7 +51,10 @@ fn build_template(template: &ConfigTemplate) -> anyhow::Result<HashMap<String, R
     let template_resources = template_value.resources;
     let mut resources_with_template: HashMap<String, ResourceWithTemplate> = HashMap::new();
     template_resources.into_iter().for_each(|(k, v)| {
-        resources_with_template.insert(k.to_string(), ResourceWithTemplate::new(v, template.get_name()));
+        resources_with_template.insert(
+            k.to_string(),
+            ResourceWithTemplate::new(v, template.get_name()),
+        );
     });
 
     Ok(resources_with_template)

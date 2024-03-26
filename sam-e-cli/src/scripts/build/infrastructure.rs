@@ -36,9 +36,9 @@ pub fn get_infrastructure_from_resources(
                 trace!("Found a DB instance!");
                 trace!("Now working out engine type...");
 
-                let Ok(db_props) =
-                    serde_yaml::from_value::<DbInstance>(resource.get_resources().properties.clone())
-                else {
+                let Ok(db_props) = serde_yaml::from_value::<DbInstance>(
+                    resource.get_resources().properties.clone(),
+                ) else {
                     warn!(
                         "Unable to parse DB instance properties for: {}. Skipping",
                         resource_name
@@ -75,7 +75,7 @@ pub fn get_infrastructure_from_resources(
                     infrastructure.push(Infrastructure::new(
                         resource_name.to_string(),
                         InfrastructureType::Postgres,
-                            resource.get_template_name(),
+                        resource.get_template_name(),
                     ));
                 }
             }
@@ -84,13 +84,14 @@ pub fn get_infrastructure_from_resources(
                 infrastructure.push(Infrastructure::new(
                     resource_name.to_string(),
                     InfrastructureType::Sqs,
-                            resource.get_template_name(),
+                    resource.get_template_name(),
                 ));
             }
             ResourceType::Bucket => {
                 trace!("Found a bucket!");
 
-                let Ok(s3_data) = serde_yaml::from_value::<Bucket>(resource.get_resources().properties.clone())
+                let Ok(s3_data) =
+                    serde_yaml::from_value::<Bucket>(resource.get_resources().properties.clone())
                 else {
                     warn!(
                         "Unable to parse S3 properties for: {}. Skipping",
@@ -143,8 +144,11 @@ fn create_infrastructure_from_s3_resource(
         resource_name.to_lowercase() // makes lowercase because s3 buckets are lowercase
     };
 
-    let mut new_infrastructure =
-        Infrastructure::new(bucket_name.to_string(), InfrastructureType::S3, template_name);
+    let mut new_infrastructure = Infrastructure::new(
+        bucket_name.to_string(),
+        InfrastructureType::S3,
+        template_name,
+    );
 
     if let Some(notification_configuration) = resource.get_notification_configuration() {
         if let Some(queue_config) = notification_configuration.get_queue_configurations() {
