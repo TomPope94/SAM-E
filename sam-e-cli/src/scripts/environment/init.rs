@@ -1,9 +1,9 @@
-use sam_e_types::config::{runtime::RuntimeBuilder, Config};
+use sam_e_types::config::{Config, runtime::RuntimeBuilder};
 
 use std::{env, fs};
 use tracing::{debug, info, warn};
 
-use crate::scripts::{build::template::find_all_files, utils::{check_init, get_sam_e_directory_path}};
+use crate::scripts::{environment::build::template::find_all_files, utils::{check_init, get_sam_e_directory_path}};
 
 pub fn init() -> anyhow::Result<()> {
     info!("Now initialising the SAM-E environment...");
@@ -27,6 +27,10 @@ pub fn init() -> anyhow::Result<()> {
         .items(&yaml_files)
         .interact()?;
 
+    let project_dir = dialoguer::Input::<String>::new()
+        .with_prompt("Please enter the project directory path. If empty, will try and use env variable $PROJECT_DIR")
+        .interact()?;
+
     let selected_as_str = selection
         .iter()
         .map(|&index| yaml_files[index].to_owned())
@@ -38,16 +42,17 @@ pub fn init() -> anyhow::Result<()> {
     fs::create_dir(&sam_e_directory_path)?;
     debug!("SAM-E directory created successfully");
 
-    let sam_e_config_path = format!("{}/sam-e-config.yaml", sam_e_directory_path);
-    info!("Creating SAM-E config file at: {:?}", sam_e_config_path);
-
     let new_runtime = RuntimeBuilder::new()
         .with_templates(selected_as_str)
+        .with_project_dir(project_dir)
         .build();
 
     let new_config = Config::new(vec![], new_runtime, vec![]);
     let config_string = serde_yaml::to_string(&new_config)?;
 
+    let sam_e_config_path = format!("{}/sam-e-config.yaml", sam_e_directory_path);
+    info!("Creating SAM-E config file at: {:?}", sam_e_config_path);
+    
     fs::write(&sam_e_config_path, config_string)?;
     debug!("SAM-E config file created successfully");
 

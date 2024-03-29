@@ -22,30 +22,10 @@ pub struct Cli {
 
 #[derive(Debug, Subcommand)]
 pub enum Command {
-    #[command(
-        about = "Initiate the SAM-E environment config. Run if first time using SAM-E in this project."
-    )]
-    Init,
-
-    #[command(about = "Build the SAM-E environment using a SAM template.yaml file")]
-    Build,
-
-    #[command(about = "Deploy the SAM-E environment. A wrapper for 'sam deploy'")]
-    Deploy,
-
-    #[command(
-        about = "Rebuild the SAM-E environment using just the Config (allowing for manual changes). Will not rebuild from the SAM template file"
-    )]
-    Rebuild,
-
-    #[command(
-        about = "Start the SAM-E environment. Will prompt you to choose which part of the environment to start."
-    )]
-    Start(StartArgs),
-
-    #[command(about = "Stop the SAM-E environment")]
-    Stop,
-
+    #[clap(subcommand)]
+    Function(FunctionCommand),
+    #[clap(subcommand)]
+    Environment(EnvironmentCommand),
     #[clap(subcommand)]
     Template(TemplateCommand),
 }
@@ -64,4 +44,28 @@ pub enum TemplateCommand {
 
     #[command(about = "Update the SAM-E template.yaml file")]
     Update,
+}
+
+pub enum FunctionCommand {
+    Build,
+}
+
+#[derive(Debug, Subcommand)]
+pub enum EnvironmentCommand {
+    #[command(
+        about = "Initiate the SAM-E environment config. Run if first time using SAM-E in this project."
+    )]
+    Init,
+    #[command(about = "Build the SAM-E environment using a SAM template.yaml file")]
+    Build,
+    #[command(
+        about = "Rebuild the SAM-E environment using just the Config (allowing for manual changes). Will not rebuild from the SAM template file"
+    )]
+    Rebuild,
+    #[command(
+        about = "Start the SAM-E environment. Will prompt you to choose which part of the environment to start."
+    )]
+    Start(StartArgs),
+    #[command(about = "Stop the SAM-E environment")]
+    Stop,
 }

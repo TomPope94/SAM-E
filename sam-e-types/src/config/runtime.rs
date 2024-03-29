@@ -6,39 +6,45 @@ use template::{Template, TemplateBuilder};
 /// Configuration for the local runtime
 #[derive(Debug, Deserialize, Serialize, Clone)]
 pub struct Runtime {
-    templates: Vec<Template>,
+    project_dir: String,
     separate_infrastructure: bool,
+    templates: Vec<Template>,
 }
 
 impl Default for Runtime {
     fn default() -> Self {
         Self {
-            templates: vec![], // Default to empty
+            project_dir: String::from(""),
             separate_infrastructure: true,
+            templates: vec![], // Default to empty
         }
     }
 }
 
 impl Runtime {
-    pub fn get_templates(&self) -> &Vec<Template> {
-        &self.templates
+    pub fn get_project_dir(&self) -> &String {
+        &self.project_dir
     }
-
     pub fn get_separate_infrastructure(&self) -> bool {
         self.separate_infrastructure
+    }
+    pub fn get_templates(&self) -> &Vec<Template> {
+        &self.templates
     }
 }
 
 pub struct RuntimeBuilder {
-    templates: Vec<Template>,
+    project_dir: String,
     separate_infrastructure: bool,
+    templates: Vec<Template>,
 }
 
 impl RuntimeBuilder {
     pub fn new() -> Self {
         Self {
-            templates: vec![],
+            project_dir: String::from(""),
             separate_infrastructure: true,
+            templates: vec![],
         }
     }
 
@@ -51,6 +57,11 @@ impl RuntimeBuilder {
         self
     }
 
+    pub fn with_project_dir(mut self, project_dir: String) -> Self {
+        self.project_dir = project_dir;
+        self
+    }
+
     pub fn with_separate_infrastructure(mut self, separate_infrastructure: bool) -> Self {
         self.separate_infrastructure = separate_infrastructure;
         self
@@ -58,8 +69,9 @@ impl RuntimeBuilder {
 
     pub fn build(self) -> Runtime {
         Runtime {
-            templates: self.templates,
+            project_dir: self.project_dir,
             separate_infrastructure: self.separate_infrastructure,
+            templates: self.templates,
         }
     }
 }
