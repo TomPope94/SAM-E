@@ -1,5 +1,6 @@
 pub mod infrastructure;
 pub mod lambda;
+pub mod runtime;
 
 pub use infrastructure::Infrastructure;
 pub use lambda::Lambda;
@@ -85,6 +86,8 @@ impl Config {
         self.runtime = runtime;
     }
 }
+<<<<<<< HEAD
+=======
 
 /// Configuration for the local runtime
 #[derive(Debug, Deserialize, Serialize, Clone)]
@@ -143,3 +146,4 @@ impl RuntimeBuilder {
     }
 }
 
+>>>>>>> main

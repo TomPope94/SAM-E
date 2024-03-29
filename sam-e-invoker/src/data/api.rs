@@ -1,8 +1,6 @@
 use crate::data::store::Store;
 
-use sam_e_types::config::{
-    Config, Infrastructure, Lambda
-};
+use sam_e_types::config::{infrastructure::Infrastructure, lambda::Lambda, Config};
 
 #[derive(Debug, Clone)]
 pub struct ApiState {
@@ -24,11 +22,14 @@ impl ApiState {
     }
 
     pub fn get_api_lambdas(&self) -> Vec<&Lambda> {
-        self.lambdas.iter().filter(|l| {
-            l.get_events()
-                .into_iter()
-                .any(|e| e.get_api_properties().is_some())
-        }).collect()
+        self.lambdas
+            .iter()
+            .filter(|l| {
+                l.get_events()
+                    .into_iter()
+                    .any(|e| e.get_api_properties().is_some())
+            })
+            .collect()
     }
 
     pub fn get_store(&self) -> &Store {

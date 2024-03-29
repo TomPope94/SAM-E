@@ -28,5 +28,3 @@ impl BasePathMapping {
         &self.stage
     }
 }
-
-

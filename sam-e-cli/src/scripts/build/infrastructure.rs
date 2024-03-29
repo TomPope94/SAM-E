@@ -1,5 +1,5 @@
 use sam_e_types::{
-    cloudformation::resource::{Bucket, DbInstance, Resource, ResourceType},
+    cloudformation::resource::{Bucket, DbInstance, ResourceType},
     config::{
         infrastructure::{Infrastructure, InfrastructureType},
         Config,
@@ -12,6 +12,8 @@ use std::{collections::HashMap, fs};
 use tera::{Context, Tera};
 use tracing::{debug, error, info, trace, warn};
 
+use crate::scripts::build::ResourceWithTemplate;
+
 const SAM_E_DIRECTORY: &str = ".sam-e";
 
 #[derive(RustEmbed)]
@@ -23,20 +25,20 @@ struct Asset;
 /// it is added to the vector.
 /// TODO: Should have a more generic approach to this, currently only supports RDS, S3, and SQS
 pub fn get_infrastructure_from_resources(
-    resources: &HashMap<String, Resource>,
+    resources: &HashMap<String, ResourceWithTemplate>,
 ) -> Result<Vec<Infrastructure>> {
     let mut infrastructure = vec![];
 
     for (resource_name, resource) in resources.iter() {
         trace!("Resource name: {}", resource_name);
-        match resource.resource_type {
+        match resource.get_resources().resource_type {
             ResourceType::DbInstance => {
                 trace!("Found a DB instance!");
                 trace!("Now working out engine type...");
 
-                let Ok(db_props) =
-                    serde_yaml::from_value::<DbInstance>(resource.properties.clone())
-                else {
+                let Ok(db_props) = serde_yaml::from_value::<DbInstance>(
+                    resource.get_resources().properties.clone(),
+                ) else {
                     warn!(
                         "Unable to parse DB instance properties for: {}. Skipping",
                         resource_name
@@ -51,18 +53,21 @@ pub fn get_infrastructure_from_resources(
                         infrastructure.push(Infrastructure::new(
                             resource_name.to_string(),
                             InfrastructureType::Postgres,
+                            resource.get_template_name(),
                         ));
                     } else if engine.contains("mysql") {
                         trace!("Database engine recognized as MySQL");
                         infrastructure.push(Infrastructure::new(
                             resource_name.to_string(),
                             InfrastructureType::Mysql,
+                            resource.get_template_name(),
                         ));
                     } else {
                         warn!("Not able to auto infer engine of DB instance: {}. Defaulting to Postgres", resource_name);
                         infrastructure.push(Infrastructure::new(
                             resource_name.to_string(),
                             InfrastructureType::Postgres,
+                            resource.get_template_name(),
                         ));
                     }
                 } else {
@@ -70,6 +75,7 @@ pub fn get_infrastructure_from_resources(
                     infrastructure.push(Infrastructure::new(
                         resource_name.to_string(),
                         InfrastructureType::Postgres,
+                        resource.get_template_name(),
                     ));
                 }
             }
@@ -78,12 +84,14 @@ pub fn get_infrastructure_from_resources(
                 infrastructure.push(Infrastructure::new(
                     resource_name.to_string(),
                     InfrastructureType::Sqs,
+                    resource.get_template_name(),
                 ));
             }
             ResourceType::Bucket => {
                 trace!("Found a bucket!");
 
-                let Ok(s3_data) = serde_yaml::from_value::<Bucket>(resource.properties.clone())
+                let Ok(s3_data) =
+                    serde_yaml::from_value::<Bucket>(resource.get_resources().properties.clone())
                 else {
                     warn!(
                         "Unable to parse S3 properties for: {}. Skipping",
@@ -95,6 +103,7 @@ pub fn get_infrastructure_from_resources(
                 infrastructure.push(create_infrastructure_from_s3_resource(
                     &s3_data,
                     resource_name,
+                    resource.get_template_name(),
                 )?);
             }
             _ => {
@@ -113,6 +122,7 @@ pub fn get_infrastructure_from_resources(
 fn create_infrastructure_from_s3_resource(
     resource: &Bucket,
     resource_name: &str,
+    template_name: &str,
 ) -> Result<Infrastructure> {
     debug!("Creating infrastructure from S3 resource");
     debug!("Properties: {:?}", resource);
@@ -134,8 +144,11 @@ fn create_infrastructure_from_s3_resource(
         resource_name.to_lowercase() // makes lowercase because s3 buckets are lowercase
     };
 
-    let mut new_infrastructure =
-        Infrastructure::new(bucket_name.to_string(), InfrastructureType::S3);
+    let mut new_infrastructure = Infrastructure::new(
+        bucket_name.to_string(),
+        InfrastructureType::S3,
+        template_name,
+    );
 
     if let Some(notification_configuration) = resource.get_notification_configuration() {
         if let Some(queue_config) = notification_configuration.get_queue_configurations() {

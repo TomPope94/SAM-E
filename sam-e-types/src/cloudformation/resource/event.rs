@@ -1,8 +1,8 @@
-use serde::Deserialize;
+use serde::{Deserialize, Serialize};
 // use crate::cloudformation::template::CloudFormationValue as Value;
 use serde_yaml::Value;
 
-#[derive(Deserialize, Debug, PartialEq, Eq)]
+#[derive(Deserialize, Serialize, Debug, PartialEq, Eq)]
 pub enum EventType {
     #[serde(rename = "Api")]
     Api,
@@ -12,7 +12,7 @@ pub enum EventType {
     Other(serde_yaml::Value),
 }
 
-#[derive(Deserialize, Debug, PartialEq, Eq)]
+#[derive(Deserialize, Serialize, Debug, PartialEq, Eq)]
 #[serde(rename_all = "PascalCase")]
 pub struct Event {
     #[serde(rename = "Type")]
@@ -20,7 +20,7 @@ pub struct Event {
     pub properties: Value,
 }
 
-#[derive(Deserialize, Debug, PartialEq, Eq)]
+#[derive(Deserialize, Serialize, Debug, PartialEq, Eq)]
 #[serde(rename_all = "PascalCase")]
 pub struct ApiEvent {
     path: Value,
@@ -47,7 +47,7 @@ impl ApiEvent {
     }
 }
 
-#[derive(Deserialize, Debug, PartialEq, Eq)]
+#[derive(Deserialize, Serialize, Debug, PartialEq, Eq)]
 #[serde(rename_all = "PascalCase")]
 pub struct SqsEvent {
     queue: Value,

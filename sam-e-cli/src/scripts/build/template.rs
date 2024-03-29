@@ -8,18 +8,20 @@ use anyhow::Result;
 use fancy_regex::Regex;
 use tracing::{debug, trace};
 
-use sam_e_types::cloudformation::{Resource, Template};
+use crate::scripts::build::ResourceWithTemplate;
+use sam_e_types::{
+    cloudformation::Template, config::runtime::template::Template as ConfigTemplate,
+};
 
 /// Takes the vec of template locations (i.e. file paths to the YAML files) and returns a hashmap
 /// of the resources section of the CloudFormation template.
 pub fn parse_templates_into_resources(
-    template_locations: &Vec<String>,
-) -> Result<HashMap<String, Resource>> {
-    let mut resources: HashMap<String, Resource> = HashMap::new();
+    templates: &Vec<ConfigTemplate>,
+) -> Result<HashMap<String, ResourceWithTemplate>> {
+    let mut resources: HashMap<String, ResourceWithTemplate> = HashMap::new();
 
-    for location in template_locations {
-        let template = Path::new(&location);
-        let temp_resources = build_template(template)?;
+    for config_template in templates {
+        let temp_resources = build_template(config_template)?;
         temp_resources.into_iter().for_each(|(k, v)| {
             resources.insert(k.to_string(), v);
         });
@@ -31,11 +33,14 @@ pub fn parse_templates_into_resources(
 /// Builds the template for an individual CloudFormation template returning a hashmap of just
 /// the resources section. Starts by reading the file to a string before passing to serde_yaml to
 /// be parsed into the HashMap.
-fn build_template(template: &Path) -> anyhow::Result<HashMap<String, Resource>> {
-    debug!("Building template: {:?}", template);
+pub fn build_template(
+    template: &ConfigTemplate,
+) -> anyhow::Result<HashMap<String, ResourceWithTemplate>> {
+    debug!("Building template: {:?}", template.get_name());
+    let template_path = Path::new(template.get_location());
 
-    let template_path = template.to_str().unwrap();
-    debug!("Template path: {}", template_path);
+    let path_as_str = template_path.to_str().unwrap();
+    debug!("Template path: {}", path_as_str);
 
     let yaml_file = fs::read_to_string(template_path)?;
     debug!("YAML file read successfully");
@@ -43,7 +48,16 @@ fn build_template(template: &Path) -> anyhow::Result<HashMap<String, Resource>> 
     let template_value: Template = serde_yaml::from_str(&yaml_file)?;
     debug!("Template value: {:#?}", template_value);
 
-    Ok(template_value.resources)
+    let template_resources = template_value.resources;
+    let mut resources_with_template: HashMap<String, ResourceWithTemplate> = HashMap::new();
+    template_resources.into_iter().for_each(|(k, v)| {
+        resources_with_template.insert(
+            k.to_string(),
+            ResourceWithTemplate::new(v, template.get_name()),
+        );
+    });
+
+    Ok(resources_with_template)
 }
 
 /// Recursively goes through directories to find all files that match a specific regex pattern.

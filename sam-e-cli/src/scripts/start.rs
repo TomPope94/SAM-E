@@ -1,35 +1,17 @@
-use sam_e_types::config::{infrastructure::InfrastructureType, Config};
-use std::{env, fs, process::Command};
+use sam_e_types::config::infrastructure::InfrastructureType;
+use std::process::Command;
 use tracing::{debug, error, info, warn};
 
-use crate::data::cli::StartArgs;
-
-const SAM_E_DIRECTORY: &str = ".sam-e";
+use crate::{data::cli::StartArgs, scripts::utils::{check_init, get_config, get_sam_e_directory_path}};
 
 pub async fn start(args: StartArgs) -> anyhow::Result<()> {
     debug!("Starting the SAM-E environment...");
 
-    let current_dir = env::current_dir()?;
-    debug!("Detected current directory as: {:?}", current_dir);
-
-    let sam_e_directory_path = format!("{}/{}", current_dir.to_str().unwrap(), SAM_E_DIRECTORY);
-
-    // Checks to see if init has been run prior to build
-    if fs::metadata(&sam_e_directory_path).is_err() {
-        error!("SAM-E directory not found, cancelling start...");
-        return Err(anyhow::Error::msg(
-            "Please run `sam-e init` and `sam-e build` before starting the environment",
-        ));
-    }
+    check_init()?;
 
     info!("Reading the current configuration");
 
-    let config_location = format!("{}/sam-e-config.yaml", &sam_e_directory_path);
-
-    // Reads the current config file
-    let current_config_raw = fs::read_to_string(config_location)?;
-    let config: Config = serde_yaml::from_str(&current_config_raw)?;
-    let config_string = serde_yaml::to_string(&config)?;
+    let config = get_config()?;
 
     let selection = dialoguer::Select::new()
         .with_prompt("Which part of the envioronment would you like to start?")
@@ -109,10 +91,11 @@ pub async fn start(args: StartArgs) -> anyhow::Result<()> {
 
     let mut sh = Command::new("sh");
 
+    let config_string = serde_yaml::to_string(&config)?;
     sh.arg("-c")
         // .arg(config_arg)
         .env("CONFIG", config_string)
-        .current_dir(sam_e_directory_path)
+        .current_dir(get_sam_e_directory_path()?)
         .arg(docker_cmd)
         .status()?;
 

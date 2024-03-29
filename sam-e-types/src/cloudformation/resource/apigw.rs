@@ -23,4 +23,3 @@ impl ApiGateway {
         &self.stage_name
     }
 }
-

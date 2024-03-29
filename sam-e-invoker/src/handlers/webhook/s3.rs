@@ -6,13 +6,10 @@ use axum::{
     extract::{Json, State},
     response::IntoResponse,
 };
-use sam_e_types::config::{infrastructure::InfrastructureType, Infrastructure};
+use sam_e_types::config::infrastructure::{Infrastructure, InfrastructureType};
 use tracing::{debug, error, info};
 
-pub async fn handler(
-    State(api_state): State<ApiState>,
-    body: Json<S3Event>,
-) -> impl IntoResponse {
+pub async fn handler(State(api_state): State<ApiState>, body: Json<S3Event>) -> impl IntoResponse {
     info!("Received a request to the S3 webhook");
     info!("Request body: {:#?}", body);
 
@@ -32,22 +29,22 @@ pub async fn handler(
         for i in s3_buckets.into_iter() {
             if i.get_name() == bucket {
                 info!("Found infrastructure for bucket: {}", bucket);
-                
+
                 let triggers = i.get_triggers();
                 if let Some(triggers) = triggers {
                     info!("Triggers: {:#?}", triggers);
 
                     if let Some(queues) = triggers.get_queues() {
                         for queue in queues {
-                            handle_queue_trigger(queue.as_str(), &s3_event, store.get_sqs_client()).await;
+                            handle_queue_trigger(queue.as_str(), &s3_event, store.get_sqs_client())
+                                .await;
                         }
                     }
                 }
-
             }
         }
     }
-    
+
     "s3"
 }
 

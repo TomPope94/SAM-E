@@ -9,15 +9,17 @@ pub struct Infrastructure {
     triggers: Option<Triggers>,
     #[serde(skip_serializing_if = "Option::is_none")]
     queue_url: Option<String>,
+    template_name: String,
 }
 
 impl Infrastructure {
-    pub fn new(name: String, infrastructure_type: InfrastructureType) -> Self {
+    pub fn new(name: String, infrastructure_type: InfrastructureType, template_name: &str) -> Self {
         Self {
             name,
             infrastructure_type,
             triggers: None,
             queue_url: None,
+            template_name: template_name.to_string(),
         }
     }
 
@@ -75,6 +77,10 @@ impl Infrastructure {
 
     pub fn set_queue_url(&mut self, url: String) {
         self.queue_url = Some(url);
+    }
+
+    pub fn get_template_name(&self) -> &str {
+        &self.template_name
     }
 }
 
