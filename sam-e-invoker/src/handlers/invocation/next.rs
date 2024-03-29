@@ -82,7 +82,8 @@ pub async fn request_handler(
     // Return the response
     if invocation.is_ok() && invocation_to_process.is_some() {
         let invocation_data = invocation_to_process.unwrap();
-        let dt = chrono::Local::now() + chrono::Duration::days(1);
+        let days_to_add = chrono::Duration::try_days(1).unwrap();
+        let dt = chrono::Local::now() + days_to_add;
 
         let event_request = invocation_data.get_request();
 
