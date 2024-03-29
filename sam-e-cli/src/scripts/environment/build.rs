@@ -2,8 +2,8 @@ pub mod infrastructure;
 pub mod lambda;
 pub mod template;
 
-use crate::scripts::environment::{
-    build::{
+use crate::scripts::{
+    environment::build::{
         infrastructure::{create_infrastructure_files, get_infrastructure_from_resources},
         lambda::{get_lambdas_from_resources, select_lambdas, specify_environment_vars},
         template::parse_templates_into_resources,

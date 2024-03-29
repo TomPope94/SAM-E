@@ -1,4 +1,4 @@
-use crate::scripts::build::ResourceWithTemplate;
+use crate::scripts::environment::build::ResourceWithTemplate;
 use anyhow::Result;
 use sam_e_types::{
     cloudformation::resource::{

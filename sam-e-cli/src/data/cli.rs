@@ -46,6 +46,7 @@ pub enum TemplateCommand {
     Update,
 }
 
+#[derive(Debug, Subcommand)]
 pub enum FunctionCommand {
     Build,
 }

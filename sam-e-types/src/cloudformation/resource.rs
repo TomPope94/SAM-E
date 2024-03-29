@@ -5,7 +5,6 @@ pub mod db_instance;
 pub mod event;
 pub mod function;
 pub mod queue;
-pub mod resource;
 
 pub use apigw::ApiGateway;
 pub use base_path_mapping::BasePathMapping;
@@ -14,11 +13,10 @@ pub use db_instance::DbInstance;
 pub use event::Event;
 pub use function::Function;
 pub use queue::Queue;
-pub use resource::{Resource, ResourceType};
 
-use serde::Deserialize;
+use serde::{Deserialize, Serialize};
 
-#[derive(Deserialize, Debug, PartialEq, Eq)]
+#[derive(Deserialize, Serialize, Debug, PartialEq, Eq, Clone)]
 pub enum ResourceType {
     #[serde(rename = "AWS::Serverless::Function")]
     Function,
@@ -36,7 +34,7 @@ pub enum ResourceType {
     Other(serde_yaml::Value),
 }
 
-#[derive(Deserialize, Debug, PartialEq, Eq)]
+#[derive(Deserialize, Serialize, Debug, PartialEq, Eq, Clone)]
 #[serde(rename_all = "PascalCase")]
 pub struct Resource {
     #[serde(rename = "Type")]

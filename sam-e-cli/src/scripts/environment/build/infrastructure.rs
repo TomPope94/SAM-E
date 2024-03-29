@@ -12,7 +12,7 @@ use std::{collections::HashMap, fs};
 use tera::{Context, Tera};
 use tracing::{debug, error, info, trace, warn};
 
-use crate::scripts::build::ResourceWithTemplate;
+use crate::scripts::environment::build::ResourceWithTemplate;
 
 const SAM_E_DIRECTORY: &str = ".sam-e";
 
