@@ -41,9 +41,10 @@ pub struct StartArgs {
 pub enum TemplateCommand {
     #[command(about = "TODO: Validate the SAM-E template.yaml file")]
     Validate,
-
     #[command(about = "Update the SAM-E template.yaml file")]
     Update,
+    #[command(about = "Add a new template to the list of templates")]
+    Add,
 }
 
 #[derive(Debug, Subcommand)]
