@@ -27,10 +27,6 @@ pub fn init() -> anyhow::Result<()> {
         .items(&yaml_files)
         .interact()?;
 
-    let project_dir = dialoguer::Input::<String>::new()
-        .with_prompt("Please enter the project directory path. If empty, will try and use env variable $PROJECT_DIR")
-        .interact()?;
-
     let selected_as_str = selection
         .iter()
         .map(|&index| yaml_files[index].to_owned())
@@ -44,7 +40,6 @@ pub fn init() -> anyhow::Result<()> {
 
     let new_runtime = RuntimeBuilder::new()
         .with_templates(selected_as_str)
-        .with_project_dir(project_dir)
         .build();
 
     let new_config = Config::new(vec![], new_runtime, vec![]);
