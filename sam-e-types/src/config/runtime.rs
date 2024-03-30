@@ -26,6 +26,12 @@ impl Runtime {
     pub fn get_templates(&self) -> &Vec<Template> {
         &self.templates
     }
+    pub fn add_template(&mut self, template: Template) {
+        self.templates.push(template);
+    }
+    pub fn add_template_str(&mut self, location: &str) {
+        self.templates.push(TemplateBuilder::new().with_location(location.to_string()).build());
+    }
 }
 
 pub struct RuntimeBuilder {
