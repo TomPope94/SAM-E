@@ -1,6 +1,6 @@
 use std::{collections::HashMap, fs, path::Path};
 
-use crate::scripts::build::{lambda::get_lambdas_from_resources, template::build_template};
+use crate::scripts::environment::build::{lambda::get_lambdas_from_resources, template::build_template};
 use sam_e_types::{
     cloudformation::{
         resource::{Function, ResourceType},

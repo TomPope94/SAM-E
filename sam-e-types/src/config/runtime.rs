@@ -6,39 +6,38 @@ use template::{Template, TemplateBuilder};
 /// Configuration for the local runtime
 #[derive(Debug, Deserialize, Serialize, Clone)]
 pub struct Runtime {
-    templates: Vec<Template>,
     separate_infrastructure: bool,
+    templates: Vec<Template>,
 }
 
 impl Default for Runtime {
     fn default() -> Self {
         Self {
-            templates: vec![], // Default to empty
             separate_infrastructure: true,
+            templates: vec![], // Default to empty
         }
     }
 }
 
 impl Runtime {
-    pub fn get_templates(&self) -> &Vec<Template> {
-        &self.templates
-    }
-
     pub fn get_separate_infrastructure(&self) -> bool {
         self.separate_infrastructure
+    }
+    pub fn get_templates(&self) -> &Vec<Template> {
+        &self.templates
     }
 }
 
 pub struct RuntimeBuilder {
-    templates: Vec<Template>,
     separate_infrastructure: bool,
+    templates: Vec<Template>,
 }
 
 impl RuntimeBuilder {
     pub fn new() -> Self {
         Self {
-            templates: vec![],
             separate_infrastructure: true,
+            templates: vec![],
         }
     }
 
@@ -58,8 +57,8 @@ impl RuntimeBuilder {
 
     pub fn build(self) -> Runtime {
         Runtime {
-            templates: self.templates,
             separate_infrastructure: self.separate_infrastructure,
+            templates: self.templates,
         }
     }
 }

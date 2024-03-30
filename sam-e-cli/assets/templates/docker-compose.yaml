@@ -49,6 +49,9 @@ services:
   {{lambda.name}}:
     init: true
     image: {{lambda.image}}
+    build:
+      context: {{lambda.docker_build.context}}
+      dockerfile: {{lambda.docker_build.dockerfile}}
     networks:
       - development
     deploy:

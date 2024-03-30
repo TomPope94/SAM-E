@@ -1,18 +1,10 @@
-pub mod build;
-pub mod deploy;
-pub mod init;
-pub mod rebuild;
-pub mod start;
-pub mod stop;
+pub mod environment;
+pub mod function;
 pub mod template;
 pub mod utils;
 
-use build::build;
-use deploy::deploy;
-use init::init;
-use rebuild::rebuild;
-use start::start;
-use stop::stop;
+pub use environment::get_environment_script;
+pub use function::get_function_script;
 use template::get_template_script;
 
 use crate::data::cli::Command;
@@ -22,12 +14,8 @@ pub async fn get_command_script(command: Command) -> anyhow::Result<()> {
     debug!("Getting command script for command: {:?}", command);
 
     match command {
-        Command::Init => init(),
-        Command::Build => build(),
-        Command::Deploy => deploy(),
-        Command::Start(args) => start(args).await,
-        Command::Rebuild => rebuild(),
-        Command::Stop => stop(),
+        Command::Function(subcommand) => get_function_script(subcommand).await,
+        Command::Environment(subcommand) => get_environment_script(subcommand).await,
         Command::Template(subcommand) => get_template_script(subcommand),
     }
 }

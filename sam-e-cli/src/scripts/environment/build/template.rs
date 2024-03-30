@@ -8,7 +8,7 @@ use anyhow::Result;
 use fancy_regex::Regex;
 use tracing::{debug, trace};
 
-use crate::scripts::build::ResourceWithTemplate;
+use crate::scripts::environment::build::ResourceWithTemplate;
 use sam_e_types::{
     cloudformation::Template, config::runtime::template::Template as ConfigTemplate,
 };

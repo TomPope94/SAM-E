@@ -1,4 +1,4 @@
-use crate::scripts::build::ResourceWithTemplate;
+use crate::scripts::environment::build::ResourceWithTemplate;
 use anyhow::Result;
 use sam_e_types::{
     cloudformation::resource::{
@@ -6,7 +6,7 @@ use sam_e_types::{
         event::{ApiEvent, EventType, SqsEvent},
         Function, ResourceType,
     },
-    config::lambda::{self, Event, Lambda},
+    config::lambda::{self, DockerBuildBuilder, Event, Lambda},
 };
 use std::collections::HashMap;
 use tracing::{debug, error, trace, warn};
@@ -134,12 +134,70 @@ pub fn get_lambdas_from_resources(
                     HashMap::new()
                 };
 
+                let package_type = properties.get_package_type();
+                let docker_build_info = match package_type {
+                    Some(package_type) => {
+                        if let Some(package_type) = package_type.as_str() {
+                            if package_type != "Image" {
+                                warn!("Package type found but not an image: {}. Found type: {}. Skipping", resource_name, package_type);
+                                continue;
+                            }
+
+                            let local_build = dialoguer::Confirm::new()
+                                .with_prompt(format!(
+                                    "Is the lambda ({}) built as part of this project?",
+                                    resource_name
+                                ))
+                                .default(true)
+                                .interact()
+                                .unwrap();
+
+                            if local_build {
+                                let context = dialoguer::Input::<String>::new()
+                                    .with_prompt(format!(
+                                        "Enter the context for the Docker build for container: {}",
+                                        resource_name
+                                    ))
+                                    .default(".".to_string())
+                                    .interact()
+                                    .unwrap();
+
+                                let dockerfile = dialoguer::Input::<String>::new()
+                                    .with_prompt(format!(
+                                        "Enter the Dockerfile (path from context) for the Docker build for container: {}",
+                                        resource_name
+                                    ))
+                                    .default("Dockerfile".to_string())
+                                    .interact()
+                                    .unwrap();
+
+                                Some(DockerBuildBuilder::new()
+                                    .with_context(context)
+                                    .with_dockerfile(dockerfile)
+                                    .build())
+                            } else {
+                                None
+                            }
+                        } else {
+                            return Err(anyhow::anyhow!(
+                                "Package type found but unable to parse: {}.",
+                                resource_name
+                            ));
+                        }
+                    }
+                    None => {
+                        warn!("Package type not found for container: {}. Note, only images are supported currently with SAM-E", resource_name);
+                        continue;
+                    }
+                };
+
                 let lambda = Lambda::new(
                     resource_name.to_string(),
                     image_uri.to_string(),
                     env_vars,
                     events_vec,
                     resource.get_template_name(),
+                    docker_build_info,
                 );
                 lambdas.push(lambda);
             }

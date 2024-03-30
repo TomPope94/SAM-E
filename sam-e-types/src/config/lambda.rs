@@ -2,6 +2,44 @@ use fancy_regex::Regex;
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
 
+#[derive(Debug, Deserialize, Serialize, Clone)]
+pub struct DockerBuild {
+    pub dockerfile: String,
+    pub context: String,
+}
+
+#[derive(Debug, Deserialize, Serialize, Clone)]
+pub struct DockerBuildBuilder {
+    dockerfile: String,
+    context: String,
+}
+
+impl DockerBuildBuilder {
+    pub fn new() -> Self {
+        Self {
+            dockerfile: String::new(),
+            context: String::new(),
+        }
+    }
+
+    pub fn with_dockerfile(mut self, dockerfile: String) -> Self {
+        self.dockerfile = dockerfile;
+        self
+    }
+
+    pub fn with_context(mut self, context: String) -> Self {
+        self.context = context;
+        self
+    }
+
+    pub fn build(self) -> DockerBuild {
+        DockerBuild {
+            dockerfile: self.dockerfile,
+            context: self.context,
+        }
+    }
+}
+
 /// A Lambda function as specified in the SAM template - will be created as a separate container
 #[derive(Debug, Deserialize, Serialize, Clone)]
 pub struct Lambda {
@@ -10,6 +48,7 @@ pub struct Lambda {
     environment_vars: HashMap<String, String>,
     events: Vec<Event>,
     template_name: String,
+    docker_build: Option<DockerBuild>,
 }
 
 impl Lambda {
@@ -19,6 +58,7 @@ impl Lambda {
         environment_vars: HashMap<String, String>,
         events: Vec<Event>,
         template_name: &str,
+        docker_build: Option<DockerBuild>,
     ) -> Self {
         Self {
             name,
@@ -26,6 +66,7 @@ impl Lambda {
             environment_vars,
             events,
             template_name: template_name.to_string(),
+            docker_build,
         }
     }
 
