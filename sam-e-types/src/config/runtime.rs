@@ -30,7 +30,11 @@ impl Runtime {
         self.templates.push(template);
     }
     pub fn add_template_str(&mut self, location: &str) {
-        self.templates.push(TemplateBuilder::new().with_location(location.to_string()).build());
+        self.templates.push(
+            TemplateBuilder::new()
+                .with_location(location.to_string())
+                .build(),
+        );
     }
 }
 
