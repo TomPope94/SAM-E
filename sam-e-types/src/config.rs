@@ -6,9 +6,9 @@ pub use infrastructure::Infrastructure;
 pub use lambda::Lambda;
 pub use runtime::Runtime;
 
-use serde::{Deserialize, Serialize};
 use infrastructure::Triggers;
 use lambda::EventProperties;
+use serde::{Deserialize, Serialize};
 
 /// The overall config construct for the SAM-E environment
 /// Will be used to drive the local runtime and the deployment process

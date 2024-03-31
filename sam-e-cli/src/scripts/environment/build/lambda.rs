@@ -203,7 +203,7 @@ fn parse_events(
 
 pub fn select_lambdas(lambdas: Vec<Lambda>) -> Vec<Lambda> {
     let lambdas_select = dialoguer::MultiSelect::new()
-        .with_prompt("Select which lambdas you would like to spin up in your environment:")
+        .with_prompt("Select which new lambdas you would like to spin up in your environment:")
         .items_checked(
             &lambdas
                 .iter()

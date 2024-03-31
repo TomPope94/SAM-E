@@ -14,7 +14,7 @@ use crate::scripts::{
     utils::{check_init, get_config, write_config},
 };
 
-use sam_e_types::cloudformation::Resource;
+use sam_e_types::{cloudformation::Resource, config::Lambda};
 
 use serde::Deserialize;
 use tracing::{debug, info};
@@ -45,6 +45,7 @@ impl ResourceWithTemplate {
     }
 }
 
+// TODO: Should refactor lambdas to be methods on a struct
 pub fn build() -> anyhow::Result<()> {
     info!("Now building the SAM-E environment...");
 
@@ -58,21 +59,43 @@ pub fn build() -> anyhow::Result<()> {
 
     info!("Collected template resources successfully, now building resources...");
 
-    // Extracts the lambdas ready to be added to the config
-    // TODO: Currently overwrites, should merge based on user input
-    // TODO: Should refactor lambdas to be methods on struct
-    let lambdas = get_lambdas_from_resources(&resources)?;
-    let chosen_lambdas = select_lambdas(lambdas);
+    let config_lambdas = config.get_lambdas().clone();
+    let config_lambdas_name = config_lambdas
+        .iter()
+        .map(|l| l.get_name())
+        .collect::<Vec<_>>();
+    if !config_lambdas_name.is_empty() {
+        info!("Detected lambdas in config. Note: Selection will be for lambdas not in use only.");
+    }
+
+    let resource_lambdas = get_lambdas_from_resources(&resources)?;
+    let new_lambdas = resource_lambdas
+        .into_iter()
+        .filter(|l| !config_lambdas_name.contains(&l.get_name()))
+        .collect::<Vec<_>>();
+
+    if new_lambdas.is_empty() {
+        info!("No new lambdas found in resources. Exiting...");
+        return Ok(());
+    }
+
+    let chosen_lambdas = select_lambdas(new_lambdas);
     debug!("Lambdas: {:#?}", chosen_lambdas);
+
     let lambdas_with_env_vars = specify_environment_vars(chosen_lambdas);
     let lambdas_with_builds = add_build_settings(lambdas_with_env_vars);
 
     // Extracts the infrastructure ready to be added to the config
     let infrastructure = get_infrastructure_from_resources(&resources)?;
     debug!("Infrastructure: {:#?}", infrastructure);
-
     config.set_infrastructure(infrastructure);
-    config.set_lambdas(lambdas_with_builds);
+
+    let combined_lambdas: Vec<Lambda> = config_lambdas
+        .into_iter()
+        .chain(lambdas_with_builds)
+        .collect();
+    config.set_lambdas(combined_lambdas);
+
     debug!("Config post build: {:#?}", config);
 
     write_config(&config)?;

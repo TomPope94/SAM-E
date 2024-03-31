@@ -39,5 +39,5 @@ pub enum ResourceType {
 pub struct Resource {
     #[serde(rename = "Type")]
     pub resource_type: ResourceType,
-    pub properties: serde_yaml::Value
+    pub properties: serde_yaml::Value,
 }
