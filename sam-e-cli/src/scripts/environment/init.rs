@@ -1,9 +1,12 @@
-use sam_e_types::config::{Config, runtime::RuntimeBuilder};
+use sam_e_types::config::{runtime::RuntimeBuilder, Config};
 
 use std::{env, fs};
 use tracing::{debug, info, warn};
 
-use crate::scripts::{environment::build::template::find_all_files, utils::{check_init, get_sam_e_directory_path}};
+use crate::scripts::{
+    environment::build::template::find_all_files,
+    utils::{check_init, get_sam_e_directory_path},
+};
 
 pub fn init() -> anyhow::Result<()> {
     info!("Now initialising the SAM-E environment...");
@@ -47,7 +50,7 @@ pub fn init() -> anyhow::Result<()> {
 
     let sam_e_config_path = format!("{}/sam-e-config.yaml", sam_e_directory_path);
     info!("Creating SAM-E config file at: {:?}", sam_e_config_path);
-    
+
     fs::write(&sam_e_config_path, config_string)?;
     debug!("SAM-E config file created successfully");
 

@@ -2,7 +2,10 @@ use sam_e_types::config::infrastructure::InfrastructureType;
 use std::process::Command;
 use tracing::{debug, error, info, warn};
 
-use crate::{data::cli::StartArgs, scripts::utils::{check_init, get_config, get_sam_e_directory_path}};
+use crate::{
+    data::cli::StartArgs,
+    scripts::utils::{check_init, get_config, get_sam_e_directory_path},
+};
 
 pub async fn start(args: StartArgs) -> anyhow::Result<()> {
     debug!("Starting the SAM-E environment...");

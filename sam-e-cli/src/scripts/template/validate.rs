@@ -1,6 +1,7 @@
-use crate::scripts::{template::utils::{
-    get_env_var_additions, get_env_var_removals, get_template_lambda,
-}, utils::{check_init, get_config}};
+use crate::scripts::{
+    template::utils::{get_env_var_additions, get_env_var_removals, get_template_lambda},
+    utils::{check_init, get_config},
+};
 
 use tracing::{info, warn};
 
