@@ -5,13 +5,16 @@ pub mod template;
 use crate::scripts::{
     environment::build::{
         infrastructure::{create_infrastructure_files, get_infrastructure_from_resources},
-        lambda::{get_lambdas_from_resources, select_lambdas, specify_environment_vars},
+        lambda::{
+            add_build_settings, get_lambdas_from_resources, select_lambdas,
+            specify_environment_vars,
+        },
         template::parse_templates_into_resources,
     },
     utils::{check_init, get_config, write_config},
 };
 
-use sam_e_types::cloudformation::Resource; 
+use sam_e_types::cloudformation::Resource;
 
 use serde::Deserialize;
 use tracing::{debug, info};
@@ -57,17 +60,19 @@ pub fn build() -> anyhow::Result<()> {
 
     // Extracts the lambdas ready to be added to the config
     // TODO: Currently overwrites, should merge based on user input
+    // TODO: Should refactor lambdas to be methods on struct
     let lambdas = get_lambdas_from_resources(&resources)?;
     let chosen_lambdas = select_lambdas(lambdas);
     debug!("Lambdas: {:#?}", chosen_lambdas);
     let lambdas_with_env_vars = specify_environment_vars(chosen_lambdas);
+    let lambdas_with_builds = add_build_settings(lambdas_with_env_vars);
 
     // Extracts the infrastructure ready to be added to the config
     let infrastructure = get_infrastructure_from_resources(&resources)?;
     debug!("Infrastructure: {:#?}", infrastructure);
 
     config.set_infrastructure(infrastructure);
-    config.set_lambdas(lambdas_with_env_vars);
+    config.set_lambdas(lambdas_with_builds);
     debug!("Config post build: {:#?}", config);
 
     write_config(&config)?;

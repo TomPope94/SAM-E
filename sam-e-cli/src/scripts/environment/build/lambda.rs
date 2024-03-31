@@ -3,10 +3,10 @@ use anyhow::Result;
 use sam_e_types::{
     cloudformation::resource::{
         self,
-        event::{ApiEvent, EventType, SqsEvent},
+        event::{ApiEvent, Event as LambdaEvent, EventType, SqsEvent},
         Function, ResourceType,
     },
-    config::lambda::{self, DockerBuildBuilder, Event, Lambda},
+    config::lambda::{self, DockerBuildBuilder, Event, Lambda, PackageType},
 };
 use std::collections::HashMap;
 use tracing::{debug, error, trace, warn};
@@ -16,7 +16,7 @@ use tracing::{debug, error, trace, warn};
 pub fn get_lambdas_from_resources(
     resources: &HashMap<String, ResourceWithTemplate>,
 ) -> Result<Vec<Lambda>> {
-    let mut lambdas = vec![];
+    let mut lambdas: Vec<Lambda> = vec![];
 
     for (resource_name, resource) in resources.iter() {
         trace!("Resource name: {}", resource_name);
@@ -27,179 +27,25 @@ pub fn get_lambdas_from_resources(
         match &resource.get_resources().resource_type {
             ResourceType::Function => {
                 trace!("Found a function!");
-                trace!("Function Props: {:#?}", resource.get_resources().properties);
-                let properties_res =
-                    serde_yaml::from_value::<Function>(resource.get_resources().properties.clone());
-                let properties = match properties_res {
-                    Ok(properties) => {
-                        debug!("Properties: {:?}", properties);
-                        properties
+
+                let properties = resource.get_resources().properties.clone();
+                let function = parse_function(
+                    resource_name,
+                    resource.get_template_name(),
+                    resources,
+                    properties,
+                );
+
+                match function {
+                    Ok(f) => {
+                        lambdas.push(f);
                     }
                     Err(e) => {
-                        error!("Error parsing function properties: {}", e);
-                        warn!(
-                            "Unable to parse function properties for: {}. Skipping",
-                            resource_name
-                        );
+                        error!("Error parsing function: {}", e);
+                        warn!("Unable to parse function: {}. Skipping", resource_name);
                         continue;
                     }
-                };
-                debug!("Properties: {:?}", properties);
-
-                let image_uri = if let Some(image) = properties.get_image_uri() {
-                    if let Some(image) = image.as_str() {
-                        image
-                    } else {
-                        return Err(anyhow::anyhow!(
-                            "Image URI found but unable to parse: {}.",
-                            resource_name
-                        ));
-                    }
-                } else {
-                    return Err(anyhow::anyhow!("Image URI not found for container: {}. Note, only images are supported currently with SAM-E", resource_name));
-                };
-
-                let events = properties.get_events();
-
-                debug!("Events: {:?}", events);
-
-                // map through the events and create a new Event for each one
-                let events_vec: Vec<Event> = events
-                    .iter()
-                    .map(|(_, event_data)| match event_data.event_type {
-                        EventType::Api => {
-                            let event_data = serde_yaml::from_value::<ApiEvent>(event_data.properties.clone());
-                            let event_props = match event_data {
-                                Ok(event_props) => event_props,
-                                Err(e) => {
-                                    error!("Error parsing API Gateway event properties: {}", e);
-                                    warn!("Unable to parse API Gateway event properties for: {}. Skipping", resource_name);
-                                    return Event::new(lambda::EventType::Api);
-                                }
-                            };
-
-                            let base_path = if let Some(api_id) = event_props.get_rest_api_id() {
-                                if let Some(api_id) = api_id.as_str() {
-                                    get_base_path(&api_id, &resources)
-                                } else {
-                                    None
-                                }
-                            } else {
-                                None
-                            };
-
-                            let mut event = Event::new(lambda::EventType::Api);
-                            event.set_api_properties(
-                                event_props.get_path().as_str().unwrap().to_string(),
-                                base_path,
-                                event_props.get_method().as_str().unwrap().to_string(),
-                            );
-
-                            event
-                        }
-                        EventType::Sqs => {
-                            let event_data = serde_yaml::from_value::<SqsEvent>(event_data.properties.clone());
-                            let event_props = match event_data {
-                                Ok(event_props) => event_props,
-                                Err(e) => {
-                                    error!("Error parsing SQS event properties: {}", e);
-                                    warn!("Unable to parse SQS event properties for: {}. Skipping", resource_name);
-                                    return Event::new(lambda::EventType::Sqs);
-                                }
-                            };
-
-                            let queue = event_props.get_queue().as_str().unwrap_or_default().to_string();
-
-                            let mut event = Event::new(lambda::EventType::Sqs);
-                            event.set_sqs_properties(queue);
-
-                            event
-                        }
-                        _ => {
-                            warn!("Unsupported event type found for: {}. Skipping", resource_name);
-                            Event::new(lambda::EventType::Api)
-                        }
-                    })
-                    .collect();
-
-                let env_vars: HashMap<String, String> = if let Some(function_env) =
-                    properties.get_environment()
-                {
-                    function_env
-                        .get_environment_vars()
-                        .iter()
-                        .map(|(k, v)| (k.to_string(), v.as_str().unwrap_or_default().to_string()))
-                        .collect()
-                } else {
-                    HashMap::new()
-                };
-
-                let package_type = properties.get_package_type();
-                let docker_build_info = match package_type {
-                    Some(package_type) => {
-                        if let Some(package_type) = package_type.as_str() {
-                            if package_type != "Image" {
-                                warn!("Package type found but not an image: {}. Found type: {}. Skipping", resource_name, package_type);
-                                continue;
-                            }
-
-                            let local_build = dialoguer::Confirm::new()
-                                .with_prompt(format!(
-                                    "Is the lambda ({}) built as part of this project?",
-                                    resource_name
-                                ))
-                                .default(true)
-                                .interact()
-                                .unwrap();
-
-                            if local_build {
-                                let context = dialoguer::Input::<String>::new()
-                                    .with_prompt(format!(
-                                        "Enter the context for the Docker build for container: {}",
-                                        resource_name
-                                    ))
-                                    .default(".".to_string())
-                                    .interact()
-                                    .unwrap();
-
-                                let dockerfile = dialoguer::Input::<String>::new()
-                                    .with_prompt(format!(
-                                        "Enter the Dockerfile (path from context) for the Docker build for container: {}",
-                                        resource_name
-                                    ))
-                                    .default("Dockerfile".to_string())
-                                    .interact()
-                                    .unwrap();
-
-                                Some(DockerBuildBuilder::new()
-                                    .with_context(context)
-                                    .with_dockerfile(dockerfile)
-                                    .build())
-                            } else {
-                                None
-                            }
-                        } else {
-                            return Err(anyhow::anyhow!(
-                                "Package type found but unable to parse: {}.",
-                                resource_name
-                            ));
-                        }
-                    }
-                    None => {
-                        warn!("Package type not found for container: {}. Note, only images are supported currently with SAM-E", resource_name);
-                        continue;
-                    }
-                };
-
-                let lambda = Lambda::new(
-                    resource_name.to_string(),
-                    image_uri.to_string(),
-                    env_vars,
-                    events_vec,
-                    resource.get_template_name(),
-                    docker_build_info,
-                );
-                lambdas.push(lambda);
+                }
             }
             _ => {
                 trace!("Resource is not a function, skipping...");
@@ -209,6 +55,150 @@ pub fn get_lambdas_from_resources(
     }
 
     Ok(lambdas)
+}
+
+fn parse_function(
+    function_name: &str,
+    template_name: &str,
+    resources: &HashMap<String, ResourceWithTemplate>,
+    resource_properties: serde_yaml::Value,
+) -> Result<Lambda> {
+    debug!("Parsing function: {}", function_name);
+
+    let properties = serde_yaml::from_value::<Function>(resource_properties)?;
+    debug!("Properties: {:?}", properties);
+
+    let image_uri = if let Some(image) = properties.get_image_uri() {
+        if let Some(image) = image.as_str() {
+            image
+        } else {
+            return Err(anyhow::anyhow!(
+                "Image URI found but unable to parse: {}.",
+                function_name
+            ));
+        }
+    } else {
+        return Err(anyhow::anyhow!("Image URI not found for container: {}. Note, only images are supported currently with SAM-E", function_name));
+    };
+
+    let events = properties.get_events();
+    debug!("Events: {:?}", events);
+
+    let events_vec = parse_events(function_name, resources, &events);
+
+    let env_vars: HashMap<String, String> = if let Some(function_env) = properties.get_environment()
+    {
+        function_env
+            .get_environment_vars()
+            .iter()
+            .map(|(k, v)| (k.to_string(), v.as_str().unwrap_or_default().to_string()))
+            .collect()
+    } else {
+        HashMap::new()
+    };
+
+    let Some(_package_type) = properties.get_package_type() else {
+        warn!("Package type not found for container: {}. Note, only images are supported currently with SAM-E", function_name);
+        return Err(anyhow::anyhow!("Package type not found for container: {}. Note, only images are supported currently with SAM-E", function_name));
+    };
+
+    let lambda = Lambda::new(
+        function_name.to_string(),
+        image_uri.to_string(),
+        env_vars,
+        events_vec,
+        template_name,
+        PackageType::Image,
+        None,
+    );
+
+    Ok(lambda)
+}
+
+/// Map through the raw events from cloud formation and create a new config Event for each one
+fn parse_events(
+    function_name: &str,
+    resources: &HashMap<String, ResourceWithTemplate>,
+    events: &HashMap<String, LambdaEvent>,
+) -> Vec<Event> {
+    let events_vec: Vec<Event> = events
+        .iter()
+        .filter_map(|(_, event_data)| {
+            let event = match event_data.event_type {
+                EventType::Api => {
+                    let event_data =
+                        serde_yaml::from_value::<ApiEvent>(event_data.properties.clone());
+                    let event_props = match event_data {
+                        Ok(event_props) => event_props,
+                        Err(e) => {
+                            error!("Error parsing API Gateway event properties: {}", e);
+                            warn!(
+                                "Unable to parse API Gateway event properties for: {}. Skipping",
+                                function_name
+                            );
+                            return None;
+                        }
+                    };
+
+                    let base_path = if let Some(api_id) = event_props.get_rest_api_id() {
+                        if let Some(api_id) = api_id.as_str() {
+                            get_base_path(&api_id, &resources)
+                        } else {
+                            None
+                        }
+                    } else {
+                        None
+                    };
+
+                    let mut event = Event::new(lambda::EventType::Api);
+                    event.set_api_properties(
+                        event_props.get_path().as_str().unwrap().to_string(),
+                        base_path,
+                        event_props.get_method().as_str().unwrap().to_string(),
+                    );
+
+                    event
+                }
+                EventType::Sqs => {
+                    let event_data =
+                        serde_yaml::from_value::<SqsEvent>(event_data.properties.clone());
+                    let event_props = match event_data {
+                        Ok(event_props) => event_props,
+                        Err(e) => {
+                            error!("Error parsing SQS event properties: {}", e);
+                            warn!(
+                                "Unable to parse SQS event properties for: {}. Skipping",
+                                function_name
+                            );
+                            return None;
+                        }
+                    };
+
+                    let queue = event_props
+                        .get_queue()
+                        .as_str()
+                        .unwrap_or_default()
+                        .to_string();
+
+                    let mut event = Event::new(lambda::EventType::Sqs);
+                    event.set_sqs_properties(queue);
+
+                    event
+                }
+                _ => {
+                    warn!(
+                        "Unsupported event type found for: {}. Skipping",
+                        function_name
+                    );
+                    return None;
+                }
+            };
+
+            Some(event)
+        })
+        .collect();
+
+    events_vec
 }
 
 pub fn select_lambdas(lambdas: Vec<Lambda>) -> Vec<Lambda> {
@@ -251,6 +241,57 @@ pub fn specify_environment_vars(lambdas: Vec<Lambda>) -> Vec<Lambda> {
             .collect();
 
         lambda.set_environment_vars(environment_vars_input);
+    }
+
+    lambdas
+}
+
+pub fn add_build_settings(lambdas: Vec<Lambda>) -> Vec<Lambda> {
+    debug!("Adding build settings to lambdas...");
+    let mut lambdas = lambdas;
+
+    for lambda in lambdas.iter_mut() {
+        let package_type = lambda.get_package_type();
+
+        match package_type {
+            PackageType::Image => {
+                let local_build = dialoguer::Confirm::new()
+                    .with_prompt(format!(
+                        "Is the lambda ({}) built as part of this project (i.e. not pulled from DockerHub)?",
+                        lambda.get_name()
+                    ))
+                    .default(true)
+                    .interact()
+                    .unwrap();
+
+                if local_build {
+                    let context = dialoguer::Input::<String>::new()
+                        .with_prompt(format!(
+                            "Enter the Docker build context for container: {}",
+                            lambda.get_name()
+                        ))
+                        .default(".".to_string())
+                        .interact()
+                        .unwrap();
+
+                    let dockerfile = dialoguer::Input::<String>::new()
+                        .with_prompt(format!(
+                            "Enter the Dockerfile (path from context) for container: {}",
+                            lambda.get_name()
+                        ))
+                        .default("Dockerfile".to_string())
+                        .interact()
+                        .unwrap();
+
+                    lambda.set_docker_build(
+                        DockerBuildBuilder::new()
+                            .with_context(context)
+                            .with_dockerfile(dockerfile)
+                            .build(),
+                    );
+                }
+            }
+        }
     }
 
     lambdas

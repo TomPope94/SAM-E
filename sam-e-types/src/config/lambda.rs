@@ -2,7 +2,7 @@ use fancy_regex::Regex;
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
 
-#[derive(Debug, Deserialize, Serialize, Clone)]
+#[derive(Debug, Deserialize, Serialize, Clone, PartialEq)]
 pub struct DockerBuild {
     pub dockerfile: String,
     pub context: String,
@@ -40,14 +40,20 @@ impl DockerBuildBuilder {
     }
 }
 
+#[derive(Debug, Deserialize, Serialize, Clone, PartialEq)]
+pub enum PackageType {
+    Image,
+}
+
 /// A Lambda function as specified in the SAM template - will be created as a separate container
-#[derive(Debug, Deserialize, Serialize, Clone)]
+#[derive(Debug, Deserialize, Serialize, Clone, PartialEq)]
 pub struct Lambda {
     name: String,
     image: String,
     environment_vars: HashMap<String, String>,
     events: Vec<Event>,
     template_name: String,
+    package_type: PackageType,
     docker_build: Option<DockerBuild>,
 }
 
@@ -58,6 +64,7 @@ impl Lambda {
         environment_vars: HashMap<String, String>,
         events: Vec<Event>,
         template_name: &str,
+        package_type: PackageType,
         docker_build: Option<DockerBuild>,
     ) -> Self {
         Self {
@@ -66,6 +73,7 @@ impl Lambda {
             environment_vars,
             events,
             template_name: template_name.to_string(),
+            package_type,
             docker_build,
         }
     }
@@ -116,6 +124,17 @@ impl Lambda {
     pub fn get_template_name(&self) -> &str {
         &self.template_name
     }
+
+    pub fn get_package_type(&self) -> &PackageType {
+        &self.package_type
+    }
+
+    pub fn get_docker_build(&self) -> Option<&DockerBuild> {
+        self.docker_build.as_ref()
+    }
+    pub fn set_docker_build(&mut self, docker_build: DockerBuild) {
+        self.docker_build = Some(docker_build);
+    }
 }
 
 /// The types of events that can trigger a Lambda
@@ -126,7 +145,7 @@ pub enum EventType {
 }
 
 /// Properties for an API event
-#[derive(Debug, Deserialize, Serialize, Clone)]
+#[derive(Debug, Deserialize, Serialize, Clone, PartialEq)]
 pub struct EventApiProperties {
     path: String,
     #[serde(skip_serializing_if = "Option::is_none")]
@@ -154,7 +173,7 @@ impl EventApiProperties {
 }
 
 /// Properties for an SQS event
-#[derive(Debug, Deserialize, Serialize, Clone)]
+#[derive(Debug, Deserialize, Serialize, Clone, PartialEq)]
 pub struct EventSqsProperties {
     queue: String,
 }
@@ -166,7 +185,7 @@ impl EventSqsProperties {
 }
 
 /// Properties for an event - abstracted to allow for different event types
-#[derive(Debug, Deserialize, Serialize, Clone)]
+#[derive(Debug, Deserialize, Serialize, Clone, PartialEq)]
 #[serde(rename_all = "snake_case")]
 #[serde(tag = "type")]
 pub enum EventProperties {
@@ -175,7 +194,7 @@ pub enum EventProperties {
 }
 
 /// A Lambda function event as specified in the SAM template
-#[derive(Debug, Deserialize, Serialize, Clone)]
+#[derive(Debug, Deserialize, Serialize, Clone, PartialEq)]
 pub struct Event {
     #[serde(skip_serializing_if = "Option::is_none")]
     properties: Option<EventProperties>,

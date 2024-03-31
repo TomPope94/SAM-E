@@ -1,8 +1,11 @@
-use std::{env, fs};
 use sam_e_types::config::Config;
+use std::{env, fs};
 use tracing::{debug, info};
 
-use crate::scripts::{environment::build::template::find_all_files, utils::{check_init, get_config, get_sam_e_directory_path}};
+use crate::scripts::{
+    environment::build::template::find_all_files,
+    utils::{check_init, get_config, get_sam_e_directory_path},
+};
 
 pub fn add() -> anyhow::Result<()> {
     info!("Adding a new template to the list of templates");
@@ -11,7 +14,8 @@ pub fn add() -> anyhow::Result<()> {
     let config = get_config()?;
     let mut runtime = config.get_runtime().clone();
     let templates = runtime.get_templates();
-    let template_locations = templates.iter()
+    let template_locations = templates
+        .iter()
         .map(|template| template.get_location())
         .collect::<Vec<&str>>();
 
@@ -35,9 +39,11 @@ pub fn add() -> anyhow::Result<()> {
     }
 
     let sam_e_directory_path = get_sam_e_directory_path()?;
-    let new_config = Config::new(config.get_lambdas().clone(),
-        runtime, 
-        config.get_infrastructure().clone());
+    let new_config = Config::new(
+        config.get_lambdas().clone(),
+        runtime,
+        config.get_infrastructure().clone(),
+    );
     let config_string = serde_yaml::to_string(&new_config)?;
 
     let sam_e_config_path = format!("{}/sam-e-config.yaml", sam_e_directory_path);

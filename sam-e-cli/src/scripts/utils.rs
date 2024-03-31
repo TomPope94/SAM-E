@@ -1,5 +1,5 @@
-use std::{env, fs};
 use sam_e_types::config::Config;
+use std::{env, fs};
 use tracing::{debug, trace};
 
 const SAM_E_DIRECTORY: &str = ".sam-e";
@@ -10,7 +10,9 @@ pub fn check_init() -> anyhow::Result<()> {
 
     // Checks to see if init has been run prior to build
     if fs::metadata(&sam_e_directory_path).is_err() {
-        return Err(anyhow::anyhow!("SAM-E directory not found, please run 'sam-e init' before rebuilding."));
+        return Err(anyhow::anyhow!(
+            "SAM-E directory not found, please run 'sam-e init' before rebuilding."
+        ));
     }
 
     Ok(())
@@ -30,7 +32,10 @@ pub fn write_config(config: &Config) -> anyhow::Result<()> {
     let sam_e_directory_path = get_sam_e_directory_path()?;
     let config_string = serde_yaml::to_string(&config)?;
 
-    fs::write(format!("{}/sam-e-config.yaml", sam_e_directory_path), config_string)?;
+    fs::write(
+        format!("{}/sam-e-config.yaml", sam_e_directory_path),
+        config_string,
+    )?;
 
     debug!("Written config to file");
     Ok(())

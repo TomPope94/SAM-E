@@ -1,9 +1,11 @@
 use tracing::{debug, info};
 
-use crate::scripts::{template::utils::{
-    get_env_var_additions, get_env_var_removals, get_template_lambda, update_template_file,
-}, utils::{check_init, get_config}};
-
+use crate::scripts::{
+    template::utils::{
+        get_env_var_additions, get_env_var_removals, get_template_lambda, update_template_file,
+    },
+    utils::{check_init, get_config},
+};
 
 pub fn update() -> anyhow::Result<()> {
     info!("Updating the SAM-E template.yaml file");

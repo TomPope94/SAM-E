@@ -1,4 +1,7 @@
-use crate::scripts::{environment::build::infrastructure::create_infrastructure_files, utils::{check_init, get_config}};
+use crate::scripts::{
+    environment::build::infrastructure::create_infrastructure_files,
+    utils::{check_init, get_config},
+};
 
 use tracing::info;
 

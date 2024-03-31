@@ -49,7 +49,8 @@ pub enum TemplateCommand {
 
 #[derive(Debug, Subcommand)]
 pub enum FunctionCommand {
-    Build,
+    #[command(about = "Add a new function from the template list to the local environment")]
+    Add,
 }
 
 #[derive(Debug, Subcommand)]
