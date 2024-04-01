@@ -1,9 +1,11 @@
 pub mod environment;
+pub mod frontend;
 pub mod function;
 pub mod template;
 pub mod utils;
 
 pub use environment::get_environment_script;
+pub use frontend::get_frontend_script;
 pub use function::get_function_script;
 use template::get_template_script;
 
@@ -17,5 +19,6 @@ pub async fn get_command_script(command: Command) -> anyhow::Result<()> {
         Command::Function(subcommand) => get_function_script(subcommand).await,
         Command::Environment(subcommand) => get_environment_script(subcommand).await,
         Command::Template(subcommand) => get_template_script(subcommand),
+        Command::Frontend(subcommand) => get_frontend_script(subcommand),
     }
 }

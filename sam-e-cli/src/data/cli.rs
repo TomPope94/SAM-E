@@ -28,6 +28,8 @@ pub enum Command {
     Environment(EnvironmentCommand),
     #[clap(subcommand)]
     Template(TemplateCommand),
+    #[clap(subcommand)]
+    Frontend(FrontendCommand),
 }
 
 #[derive(Debug, Args)]
@@ -45,6 +47,18 @@ pub enum TemplateCommand {
     Update,
     #[command(about = "Add a new template to the list of templates")]
     Add,
+}
+
+#[derive(Debug, Subcommand)]
+pub enum FrontendCommand {
+    #[command(about = "Add a new frontend to the local environment. Note: this currently sits disconnected from the template files.")]
+    Add,
+    #[command(about = "Remove a frontend from the local environment")]
+    Remove,
+    #[command(about = "Start the frontend")]
+    Start,
+    #[command(about = "Stop the frontend")]
+    Stop,
 }
 
 #[derive(Debug, Subcommand)]
