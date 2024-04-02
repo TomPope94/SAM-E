@@ -187,6 +187,11 @@ pub fn create_infrastructure_files(config: &Config) -> anyhow::Result<()> {
     context.insert("lambdas", config.get_lambdas());
     context.insert("infrastructure", config.get_infrastructure());
 
+    let frontend = config.get_frontend();
+    if let Some(frontend) = frontend {
+        context.insert("frontend", frontend);
+    }
+
     if let Some(s3_dockerfile) = Asset::get("local-s3/entrypoint.sh") {
         let raw_data = s3_dockerfile.data;
         tera.add_raw_template("s3-dockerfile", &String::from_utf8_lossy(&raw_data))?;

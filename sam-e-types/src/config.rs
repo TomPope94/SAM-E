@@ -1,6 +1,7 @@
 pub mod infrastructure;
 pub mod lambda;
 pub mod runtime;
+pub mod frontend;
 
 pub use infrastructure::Infrastructure;
 pub use lambda::Lambda;
@@ -8,6 +9,7 @@ pub use runtime::Runtime;
 
 use infrastructure::Triggers;
 use lambda::EventProperties;
+use frontend::Frontend;
 use serde::{Deserialize, Serialize};
 
 /// The overall config construct for the SAM-E environment
@@ -17,6 +19,7 @@ pub struct Config {
     lambdas: Vec<Lambda>,
     runtime: Runtime,
     infrastructure: Vec<Infrastructure>,
+    frontend: Option<Frontend>,
 }
 
 impl Config {
@@ -24,11 +27,13 @@ impl Config {
         lambdas: Vec<Lambda>,
         runtime: Runtime,
         infrastructure: Vec<Infrastructure>,
+        frontend: Option<Frontend>,
     ) -> Self {
         Self {
             lambdas,
             runtime,
             infrastructure,
+            frontend,
         }
     }
 
@@ -85,5 +90,13 @@ impl Config {
 
     pub fn set_runtime(&mut self, runtime: Runtime) {
         self.runtime = runtime;
+    }
+
+    pub fn get_frontend(&self) -> Option<&Frontend> {
+        self.frontend.as_ref()
+    }
+
+    pub fn set_frontend(&mut self, frontend: Frontend) {
+        self.frontend = Some(frontend);
     }
 }

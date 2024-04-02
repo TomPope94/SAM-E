@@ -52,6 +52,7 @@ pub fn add() -> anyhow::Result<()> {
         current_lambdas,
         config.get_runtime().clone(),
         config.get_infrastructure().clone(),
+        None,
     );
     let config_string = serde_yaml::to_string(&new_config)?;
 
