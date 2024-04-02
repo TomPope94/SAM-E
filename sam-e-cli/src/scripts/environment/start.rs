@@ -18,7 +18,7 @@ pub async fn start(args: StartArgs) -> anyhow::Result<()> {
 
     let selection = dialoguer::Select::new()
         .with_prompt("Which part of the envioronment would you like to start?")
-        .items(&["Infrastructure", "Functions", "All"])
+        .items(&["Infrastructure", "Functions", "Frontend", "All"])
         .default(0)
         .interact()?;
 
@@ -77,6 +77,23 @@ pub async fn start(args: StartArgs) -> anyhow::Result<()> {
             cmd_str
         }
         2 => {
+            info!("Starting the frontend...");
+            let frontend = config.get_frontend();
+
+            if let Some(frontend) = frontend {
+                let mut cmd_str =
+                    "docker compose --compatibility up --remove-orphans --build frontend_"
+                        .to_string();
+                cmd_str.push_str(frontend.get_name());
+                cmd_str.push(' ');
+
+                cmd_str
+            } else {
+                warn!("No frontend found in the configuration. Please run `sam-e frontend add` to add one.");
+                return Err(anyhow::Error::msg("No frontend found in the configuration"));
+            }
+        }
+        3 => {
             info!("Starting the entire environment...");
             "docker compose --compatibility up --remove-orphans --build".to_string()
         }

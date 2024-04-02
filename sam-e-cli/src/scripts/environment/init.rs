@@ -45,7 +45,7 @@ pub fn init() -> anyhow::Result<()> {
         .with_templates(selected_as_str)
         .build();
 
-    let new_config = Config::new(vec![], new_runtime, vec![]);
+    let new_config = Config::new(vec![], new_runtime, vec![], None);
     let config_string = serde_yaml::to_string(&new_config)?;
 
     let sam_e_config_path = format!("{}/sam-e-config.yaml", sam_e_directory_path);

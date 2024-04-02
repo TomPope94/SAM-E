@@ -70,6 +70,28 @@ services:
       {% endfor -%}
 {% endfor %}
 
+{%- if frontend %}
+  frontend_{{frontend.name}}:
+    init: true
+    build:
+      context: {{frontend.docker_build.context}}
+      dockerfile: {{frontend.docker_build.dockerfile}}
+    working_dir: /frontend
+    entrypoint: /frontend/entrypoint.sh
+    volumes:
+      - ./node_modules:/frontend/node_modules
+    networks:
+      - development
+    ports:
+      - {{frontend.port}}:{{frontend.port}}
+    deploy:
+      replicas: 1
+    environment:
+      {% for key, value in frontend.env_vars -%}
+      - {{key}}={{value}}
+      {% endfor -%}
+{%- endif %}
+
   # *********************** Custom infrastructure ***************************
   # Each of the local infrastructure needed depending on the infrastructure added in CloudFormation template
 {%- set postgres_container = false %}
@@ -143,23 +165,3 @@ services:
 {%- endif %}
 {%- endfor %}
 
-  # dynamodb-local:
-  #   init: true
-  #   command: "-XX:-UsePerfData -Xmx10g -jar DynamoDBLocal.jar -inMemory -sharedDb"
-  #   image: "crcdockerdevops/dynamodb-local:1.20.0"
-  #   # image: "amazon/dynamodb-local:1.20.0"
-  #   ports:
-  #     - "8000:8000"
-  #   networks:
-  #     - development   
-  # 
-  # dynamodb-admin:
-  #   init: true
-  #   environment:
-  #     - DYNAMO_ENDPOINT=http://dynamodb-local:8000
-  #     - PORT=8001
-  #   image: crcdockerdevops/dynamodb-admin:4.1.0
-  #   ports:
-  #     - "8001:8001"    
-  #   networks:
-  #     - development

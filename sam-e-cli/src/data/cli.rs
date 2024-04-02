@@ -51,7 +51,9 @@ pub enum TemplateCommand {
 
 #[derive(Debug, Subcommand)]
 pub enum FrontendCommand {
-    #[command(about = "Add a new frontend to the local environment. Note: this currently sits disconnected from the template files.")]
+    #[command(
+        about = "Add a new frontend to the local environment. Note: this currently sits disconnected from the template files."
+    )]
     Add,
     #[command(about = "Remove a frontend from the local environment")]
     Remove,
