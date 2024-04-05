@@ -56,8 +56,6 @@ services:
       - development
     deploy:
       replicas: 1
-    depends_on:
-      - sam-e-invoker
     environment:
       - AWS_LAMBDA_RUNTIME_API=http://sam-e-invoker:3000/{{lambda.name}}
       - AWS_LAMBDA_FUNCTION_NAME={{lambda.name}}
@@ -158,8 +156,6 @@ services:
       - MINIO_NOTIFY_WEBHOOK_ENDPOINT_LOCAL=http://sam-e-invoker:3000/webhook/s3
     networks:
       - development
-    depends_on:
-      - sam-e-invoker
     volumes:
       - ./local-s3/minio:/data
 {%- endif %}

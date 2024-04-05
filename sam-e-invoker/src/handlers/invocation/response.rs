@@ -8,7 +8,7 @@ use axum::{
     http::{HeaderMap, StatusCode},
     response::IntoResponse,
 };
-use std::str;
+use std::{collections::HashMap, str};
 use tracing::{debug, error, info, trace};
 use uuid::Uuid;
 
@@ -27,7 +27,7 @@ pub async fn response_handler(
     );
     let store = api_state.get_store();
 
-    let headers_hashmap = headers
+    let mut headers_hashmap: HashMap<String, String> = headers
         .iter()
         .map(|(key, value)| {
             let value_string: &str = str::from_utf8(value.as_bytes()).unwrap_or("unknown");
@@ -54,7 +54,6 @@ pub async fn response_handler(
             debug!("Raw lambda response headers: {:?}", headers_hashmap);
             debug!("Raw lambda response body: {:?}", body);
 
-            invocation.set_response_headers(headers_hashmap);
             invocation.set_status(Status::Processed);
 
             match invocation.get_event_source() {
@@ -62,10 +61,19 @@ pub async fn response_handler(
                     debug!("Detected event source as API");
                     let response_data: ApiGatewayProxyResponse =
                         serde_json::from_slice(&body).unwrap();
+
+                    for (key, value) in response_data.headers.iter() {
+                        let value_string: &str =
+                            str::from_utf8(value.as_bytes()).unwrap_or("unknown");
+                        headers_hashmap.insert(key.to_string(), value_string.to_owned());
+                    }
+
                     invocation.set_response(ResponseType::Api(response_data));
+                    invocation.set_response_headers(headers_hashmap);
                 }
                 EventSource::Sqs => {
                     debug!("Detected event source as SQS");
+                    invocation.set_response_headers(headers_hashmap);
                     // TODO: delete the message on success: currently happens on invocation
                 }
             }
