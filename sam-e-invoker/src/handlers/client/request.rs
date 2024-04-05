@@ -13,10 +13,10 @@ use axum::{
     debug_handler,
     extract::{Json, Path, Query, State},
     http::{HeaderMap, HeaderName, HeaderValue, Method, StatusCode},
-    response::IntoResponse,
+    response::{Html, IntoResponse},
 };
-use std::collections::HashMap;
-use tracing::{debug, error, trace};
+use std::{collections::HashMap, str};
+use tracing::{debug, error, info, trace};
 
 #[debug_handler]
 pub async fn request_handler(
@@ -99,7 +99,8 @@ pub async fn request_handler(
                     .unwrap_or(StatusCode::INTERNAL_SERVER_ERROR);
 
             trace!("Returning response with status code: {:?}", status_code);
-            trace!("Returning response with headers: {:?}", header_map);
+            info!("Returning response with headers: {:?}", header_map);
+            info!("Headers in response: {:?}", &api_response.headers);
 
             if let Some(response_body) = &api_response.body {
                 trace!("Returning response with body: {:?}", response_body);
@@ -108,7 +109,17 @@ pub async fn request_handler(
                         if let Ok(parsed) = serde_json::from_str::<serde_json::Value>(text) {
                             Json(parsed).into_response()
                         } else {
-                            text.clone().into_response()
+                            if let Some(content_type) = header_map.get("content-type") {
+                                let value_string: &str =
+                                    str::from_utf8(content_type.as_bytes()).unwrap_or("unknown");
+                                if value_string.contains("text/html") {
+                                    Html(text.clone()).into_response()
+                                } else {
+                                    text.clone().into_response()
+                                }
+                            } else {
+                                text.clone().into_response()
+                            }
                         }
                     }
                     encodings::Body::Binary(binary) => binary.clone().into_response(),
