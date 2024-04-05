@@ -28,7 +28,7 @@ pub async fn start(args: StartArgs) -> anyhow::Result<()> {
             let infrastructure = config.get_infrastructure();
 
             let mut cmd_str =
-                "docker compose --compatibility up --remove-orphans --build ".to_string();
+                "docker compose --compatibility up --remove-orphans --build sam-e-invoker ".to_string();
 
             let mut use_s3 = false;
             let mut use_postgres = false;
