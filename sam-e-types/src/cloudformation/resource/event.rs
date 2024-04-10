@@ -6,7 +6,7 @@ use serde_yaml::Value;
 pub enum EventType {
     #[serde(rename = "Api")]
     Api,
-    #[serde(rename = "Sqs")]
+    #[serde(rename = "SQS")]
     Sqs,
     #[serde(untagged)]
     Other(serde_yaml::Value),
