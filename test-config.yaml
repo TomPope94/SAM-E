@@ -1,0 +1,90 @@
+lambdas:
+- name: AnalyticsServiceQueueHandler
+  image: analytics_service_queue_handler
+  environment_vars:
+    RUST_LOG: debug
+    BSU__STAGE: Prod
+    BSU__DATABASE__MAX_CONNECTIONS: '4'
+    BSU__JWT__ACCESS_EXPIRATION_MINUTES: '120'
+    BSU__DATABASE__HOST: postgres-local
+    BSU__JWT__REFRESH_EXPIRATION_MINUTES: '600'
+    BSU__SECRET_PROVIDER: environment
+    BSU__DOMAIN: development:3000
+    BSU__DATABASE__ALLOW_FULL_TABLE_OPERATIONS: 'false'
+    BSU__JWT__KEY: asdf
+    BSU__DATABASE__CREDENTIAL__USERNAME: postgres
+    BSU__DATABASE__PORT: '5432'
+    BSU__DATABASE__CREDENTIAL__PASSWORD: password
+    BSU__DATABASE__NAME: analytics_service
+  events:
+  - properties:
+    type: sqs
+    queue: AnalyticsServiceQueue
+    batch_size: 10
+  template_name: 545841ff-7aff-47f2-ae43-8363c8247f63
+  package_type: Image
+  docker_build:
+    dockerfile: dockerfiles/Dockerfile.release
+    context: ../services/analytics/analytics_queue_handler
+- name: AnalyticsApiHandler
+  image: analytics_api_handler
+  environment_vars:
+    RUST_LOG: debug
+    BSU__STAGE: Prod
+    BSU__DATABASE__MAX_CONNECTIONS: '4'
+    BSU__JWT__ACCESS_EXPIRATION_MINUTES: '120'
+    BSU__DATABASE__HOST: postgres-local
+    BSU__JWT__REFRESH_EXPIRATION_MINUTES: '600'
+    BSU__SECRET_PROVIDER: environment
+    BSU__DOMAIN: development:3000
+    BSU__DATABASE__ALLOW_FULL_TABLE_OPERATIONS: 'false'
+    BSU__JWT__KEY: asdf
+    BSU__DATABASE__CREDENTIAL__USERNAME: postgres
+    BSU__DATABASE__PORT: '5432'
+    BSU__DATABASE__CREDENTIAL__PASSWORD: password
+    BSU__DATABASE__NAME: analytics_service
+  events:
+  - properties:
+      type: api
+      path: /
+      base_path: analytics
+      method: ANY
+      route_regex: ^/analytics/$
+  - properties:
+      type: api
+      path: /{path+}
+      base_path: analytics
+      method: ANY
+      route_regex: ^/analytics/(?P<path>.*)$
+  template_name: 545841ff-7aff-47f2-ae43-8363c8247f63
+  package_type: Image
+  docker_build:
+    dockerfile: dockerfiles/Dockerfile.release
+    context: ../services/analytics/analytics_api_handler
+runtime:
+  separate_infrastructure: true
+  templates:
+  - name: 0873f93a-cd81-4d88-931a-e37be2460c67
+    location: /Users/tompope/Work/business-suite/service-deployment/infrastructure/databases/postgres/templates/create-warehouse-database-instance.yaml
+  - name: 545841ff-7aff-47f2-ae43-8363c8247f63
+    location: /Users/tompope/Work/business-suite/service-deployment/services/analytics_template.yaml
+  - name: 1b6ef174-85af-40ed-8ffe-b05539ff75b7
+    location: /Users/tompope/Work/business-suite/service-deployment/services/auth_template.yaml
+  - name: c49208f7-7e38-4ddd-8895-d05c2639fded
+    location: /Users/tompope/Work/business-suite/service-deployment/services/email_template.yaml
+  - name: 097417c6-0f1b-41c9-ad51-a45ca1069f6f
+    location: /Users/tompope/Work/business-suite/service-deployment/services/response_template.yaml
+infrastructure:
+- name: AnalyticsServiceQueueDLQ
+  infrastructure_type: Sqs
+  template_name: 545841ff-7aff-47f2-ae43-8363c8247f63
+- name: RDSDatabaseInstance
+  infrastructure_type: Postgres
+  template_name: 0873f93a-cd81-4d88-931a-e37be2460c67
+- name: AnalyticsServiceQueue
+  infrastructure_type: Sqs
+  template_name: 545841ff-7aff-47f2-ae43-8363c8247f63
+  triggers:
+    lambdas:
+    - AnalyticsServiceQueueHandler
+frontend: null

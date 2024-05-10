@@ -1,7 +1,9 @@
 [workspace]
 resolver = '2'
 members = [
-  'sam-e-invoker',
+  'sam-e-invoker-new',
+  'sources/sam-e-source-apigw',
+  'sam-e-types'
 ]
 exclude = [
   'sam-e-cli'

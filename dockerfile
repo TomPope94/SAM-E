@@ -1,4 +1,3 @@
-# TODO: Make this not CRC dependent
 FROM crcdockerdevops/rust-musl:1.76 AS chef 
 
 ARG TARGETPLATFORM
@@ -23,11 +22,11 @@ RUN if [ "${TARGETPLATFORM#*linux/}" = "amd64" ]; then \
     fi
 COPY . .
 RUN if [ "${TARGETPLATFORM#*linux/}" = "amd64" ]; then \
-    cargo build --target x86_64-unknown-linux-musl; \
-    mv target/x86_64-unknown-linux-musl/debug/app /usr/local/app; \
+    cargo build --target x86_64-unknown-linux-musl --release; \
+    mv target/x86_64-unknown-linux-musl/release /usr/local/release/; \
     else \
-    cargo build --target aarch64-unknown-linux-musl; \
-    mv target/aarch64-unknown-linux-musl/debug/app /usr/local/app; \
+    cargo build --target aarch64-unknown-linux-musl --release; \
+    mv target/aarch64-unknown-linux-musl/release /usr/local/release/; \
     fi
 
 # Final
@@ -39,6 +38,9 @@ RUN apt-get update && apt-get install -y \
     wget \
     && rm -rf /var/lib/apt/lists/*
 
-COPY --from=builder /usr/local/app /app
+COPY --from=builder /usr/local/release /app/release/
 
-ENTRYPOINT ["/app"]
+COPY start.sh /app/start.sh
+RUN chmod +x /app/start.sh
+
+CMD ["/app/start.sh"]
