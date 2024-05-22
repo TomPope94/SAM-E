@@ -1,5 +1,6 @@
 use reqwest::Client;
 use sam_e_types::config::{lambda::Lambda, Config};
+use std::str::FromStr;
 
 #[derive(Debug, Clone)]
 pub struct ApiState {
@@ -34,5 +35,30 @@ impl ApiState {
 
     pub fn get_client(&self) -> &Client {
         &self.client
+    }
+}
+
+#[derive(Debug)]
+pub enum ContentType {
+    Json,
+    Html,
+    Text,
+}
+
+impl FromStr for ContentType {
+    type Err = ();
+
+    fn from_str(s: &str) -> Result<Self, Self::Err> {
+        if s.contains("text/html") {
+            return Ok(ContentType::Html);
+        }
+        if s.contains("application/json") {
+            return Ok(ContentType::Json);
+        }
+        if s.contains("text/plain") {
+            return Ok(ContentType::Text);
+        }
+
+        Err(())
     }
 }

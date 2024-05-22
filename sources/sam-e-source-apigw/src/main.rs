@@ -18,7 +18,6 @@ use sam_e_types::config::Config;
 async fn main() -> anyhow::Result<()> {
     tracing_subscriber::fmt()
         .with_env_filter(EnvFilter::from_default_env())
-        .with_target(false)
         .with_ansi(false)
         .without_time()
         .init();
@@ -52,8 +51,8 @@ async fn main() -> anyhow::Result<()> {
         .layer(middleware::cors_layer())
         .with_state(api_state);
 
-    info!("Starting the server");
     let listener = tokio::net::TcpListener::bind("0.0.0.0:3000").await.unwrap();
+    info!("Listening on: {}", listener.local_addr().unwrap());
     axum::serve(listener, app).await.unwrap();
 
     Ok(())
