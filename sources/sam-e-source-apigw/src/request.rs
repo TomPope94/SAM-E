@@ -9,13 +9,11 @@ use axum::{
     extract::{Json, Path, Query, State},
     http::{HeaderMap, Method},
     response::{Html, IntoResponse},
-    debug_handler,
 };
 use std::{str::FromStr, collections::HashMap};
 use uuid::Uuid;
 use tracing::{debug, trace, warn};
 
-#[debug_handler]
 pub async fn handler(
     method: Method,
     headers: HeaderMap,
