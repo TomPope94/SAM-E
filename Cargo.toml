@@ -3,6 +3,7 @@ resolver = '2'
 members = [
   'sam-e-invoker-new',
   'sources/sam-e-source-apigw',
+  'sources/sam-e-source-sqs',
   'sam-e-types'
 ]
 exclude = [

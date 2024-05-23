@@ -9,11 +9,6 @@ pub struct ApiState {
 }
 
 impl ApiState {
-    pub fn new(lambdas: Vec<Lambda>) -> Self {
-        let client = Client::new();
-        Self { lambdas, client }
-    }
-
     pub fn from_config(config: &Config) -> Self {
         let client = Client::new();
         Self {

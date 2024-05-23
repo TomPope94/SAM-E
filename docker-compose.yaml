@@ -12,3 +12,5 @@ services:
     ports:
       - 3000:3000
       - 3030:3030
+    volumes:
+      - /home/ubuntu/.aws/credentials:/root/.aws/credentials:ro
