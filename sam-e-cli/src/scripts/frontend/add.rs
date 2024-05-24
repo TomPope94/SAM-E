@@ -1,6 +1,6 @@
 use std::{collections::HashMap, fs};
 
-use sam_e_types::config::{frontend::FrontendBuilder, lambda::DockerBuildBuilder};
+use sam_e_types::config::{frontend::FrontendBuilder, lambda::docker::DockerBuildBuilder};
 use tracing::{debug, info, warn};
 
 use crate::scripts::utils::{get_config, get_sam_e_directory_path};

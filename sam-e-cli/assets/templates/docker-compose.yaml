@@ -52,6 +52,10 @@ services:
     build:
       context: {{lambda.docker_build.context}}
       dockerfile: {{lambda.docker_build.dockerfile}}
+      {%- if lambda.docker_build.use_ssh %}
+      ssh:
+        - default
+      {%- endif %}
     networks:
       - development
     deploy:

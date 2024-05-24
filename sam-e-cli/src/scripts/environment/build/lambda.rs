@@ -6,7 +6,7 @@ use sam_e_types::{
         event::{ApiEvent, Event as LambdaEvent, EventType, SqsEvent},
         Function, ResourceType,
     },
-    config::lambda::{self, DockerBuildBuilder, Event, Lambda, PackageType},
+    config::lambda::{self, docker::DockerBuildBuilder, Event, Lambda, PackageType},
 };
 use std::collections::HashMap;
 use tracing::{debug, error, trace, warn};
@@ -283,10 +283,20 @@ pub fn add_build_settings(lambdas: Vec<Lambda>) -> Vec<Lambda> {
                         .interact()
                         .unwrap();
 
+                    let use_ssh = dialoguer::Confirm::new()
+                        .with_prompt(format!(
+                            "Does the Docker build require SSH for container: {}",
+                            lambda.get_name()
+                        ))
+                        .default(false)
+                        .interact()
+                        .unwrap();
+
                     lambda.set_docker_build(
                         DockerBuildBuilder::new()
                             .with_context(context)
                             .with_dockerfile(dockerfile)
+                            .with_use_ssh(use_ssh)
                             .build(),
                     );
                 }
