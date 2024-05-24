@@ -186,6 +186,7 @@ pub fn create_infrastructure_files(config: &Config) -> anyhow::Result<()> {
 
     context.insert("lambdas", config.get_lambdas());
     context.insert("infrastructure", config.get_infrastructure());
+    context.insert("runtime", config.get_runtime());
 
     let frontend = config.get_frontend();
     if let Some(frontend) = frontend {

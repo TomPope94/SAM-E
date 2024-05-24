@@ -8,7 +8,7 @@ pub use lambda::Lambda;
 pub use runtime::Runtime;
 
 use infrastructure::Triggers;
-use lambda::EventProperties;
+use lambda::event::EventProperties;
 use frontend::Frontend;
 use serde::{Deserialize, Serialize};
 

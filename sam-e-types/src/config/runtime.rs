@@ -6,23 +6,24 @@ use template::{Template, TemplateBuilder};
 /// Configuration for the local runtime
 #[derive(Debug, Deserialize, Serialize, Clone)]
 pub struct Runtime {
-    separate_infrastructure: bool,
     templates: Vec<Template>,
+    use_api_source: bool,
+    use_queue_source: bool,
+    use_s3_source: bool,
 }
 
 impl Default for Runtime {
     fn default() -> Self {
         Self {
-            separate_infrastructure: true,
             templates: vec![], // Default to empty
+            use_api_source: false,
+            use_queue_source: false,
+            use_s3_source: false,
         }
     }
 }
 
 impl Runtime {
-    pub fn get_separate_infrastructure(&self) -> bool {
-        self.separate_infrastructure
-    }
     pub fn get_templates(&self) -> &Vec<Template> {
         &self.templates
     }
@@ -36,18 +37,46 @@ impl Runtime {
                 .build(),
         );
     }
+
+    pub fn get_use_api_source(&self) -> bool {
+        self.use_api_source
+    }
+
+    pub fn get_use_queue_source(&self) -> bool {
+        self.use_queue_source
+    }
+
+    pub fn get_use_s3_source(&self) -> bool {
+        self.use_s3_source
+    }
+
+    pub fn set_use_api_source(&mut self, use_api_source: bool) {
+        self.use_api_source = use_api_source;
+    }
+
+    pub fn set_use_queue_source(&mut self, use_queue_source: bool) {
+        self.use_queue_source = use_queue_source;
+    }
+
+    pub fn set_use_s3_source(&mut self, use_s3_source: bool) {
+        self.use_s3_source = use_s3_source;
+    }
 }
 
 pub struct RuntimeBuilder {
-    separate_infrastructure: bool,
     templates: Vec<Template>,
+    use_api_source: bool,
+    use_queue_source: bool,
+    use_s3_source: bool,
 }
 
 impl RuntimeBuilder {
     pub fn new() -> Self {
         Self {
-            separate_infrastructure: true,
             templates: vec![],
+            use_api_source: false,
+            use_queue_source: false,
+            use_s3_source: false,
         }
     }
 
@@ -60,15 +89,27 @@ impl RuntimeBuilder {
         self
     }
 
-    pub fn with_separate_infrastructure(mut self, separate_infrastructure: bool) -> Self {
-        self.separate_infrastructure = separate_infrastructure;
+    pub fn with_use_api_source(mut self, use_api_source: bool) -> Self {
+        self.use_api_source = use_api_source;
+        self
+    }
+
+    pub fn with_use_queue_source(mut self, use_queue_source: bool) -> Self {
+        self.use_queue_source = use_queue_source;
+        self
+    }
+
+    pub fn with_use_s3_source(mut self, use_s3_source: bool) -> Self {
+        self.use_s3_source = use_s3_source;
         self
     }
 
     pub fn build(self) -> Runtime {
         Runtime {
-            separate_infrastructure: self.separate_infrastructure,
             templates: self.templates,
+            use_api_source: self.use_api_source,
+            use_queue_source: self.use_queue_source,
+            use_s3_source: self.use_s3_source,
         }
     }
 }
