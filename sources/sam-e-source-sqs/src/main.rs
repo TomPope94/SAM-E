@@ -21,6 +21,13 @@ async fn main() -> anyhow::Result<()> {
     let config: Config = serde_yaml::from_str(&config_env_string)?;
     debug!("Configuration read successfully");
 
+    if config.get_runtime().get_use_queue_source() {
+        debug!("Using the SQS source as specified in config...");
+    } else {
+        debug!("SQS source not specified in config, exiting...");
+        return Ok(());
+    }
+
     let queue_state = data::QueueState::from_config(&config).await;
     debug!("Queue state created");
 

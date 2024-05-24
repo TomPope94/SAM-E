@@ -38,7 +38,13 @@ services:
     networks:
       - development
     ports:
+      - 3030:3030
+      {%- if runtime.use_api_source %}
       - 3000:3000
+      {%- endif %}
+      {%- if runtime.use_s3_source %}
+      - 3001:3001
+      {%- endif %}
     mem_limit: 250m
     volumes:
       - /home/ubuntu/.aws/credentials:/root/.aws/credentials:ro
@@ -61,7 +67,7 @@ services:
     deploy:
       replicas: 1
     environment:
-      - AWS_LAMBDA_RUNTIME_API=http://sam-e-invoker:3000/{{lambda.name}}
+      - AWS_LAMBDA_RUNTIME_API=http://sam-e-invoker:3030/{{lambda.name}}
       - AWS_LAMBDA_FUNCTION_NAME={{lambda.name}}
       - AWS_LAMBDA_FUNCTION_MEMORY_SIZE=50
       - AWS_LAMBDA_FUNCTION_VERSION=1
@@ -157,7 +163,7 @@ services:
       - MINIO_ROOT_USER=minioadmin
       - MINIO_ROOT_PASSWORD=minioadmin
       - MINIO_NOTIFY_WEBHOOK_ENABLE_LOCAL=on
-      - MINIO_NOTIFY_WEBHOOK_ENDPOINT_LOCAL=http://sam-e-invoker:3000/webhook/s3
+      - MINIO_NOTIFY_WEBHOOK_ENDPOINT_LOCAL=http://sam-e-invoker:3001/
     networks:
       - development
     volumes:

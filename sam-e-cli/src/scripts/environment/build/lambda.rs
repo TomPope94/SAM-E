@@ -6,7 +6,7 @@ use sam_e_types::{
         event::{ApiEvent, Event as LambdaEvent, EventType, SqsEvent},
         Function, ResourceType,
     },
-    config::lambda::{self, docker::DockerBuildBuilder, Event, Lambda, PackageType},
+    config::lambda::{docker::DockerBuildBuilder, event::Event, Lambda, PackageType},
 };
 use std::collections::HashMap;
 use tracing::{debug, error, trace, warn};
@@ -150,7 +150,7 @@ fn parse_events(
                         None
                     };
 
-                    let mut event = Event::new(lambda::EventType::Api);
+                    let mut event = Event::new(None);
                     event.set_api_properties(
                         event_props.get_path().as_str().unwrap().to_string(),
                         base_path,
@@ -180,7 +180,7 @@ fn parse_events(
                         .unwrap_or_default()
                         .to_string();
 
-                    let mut event = Event::new(lambda::EventType::Sqs);
+                    let mut event = Event::new(None);
                     event.set_sqs_properties(queue);
 
                     event

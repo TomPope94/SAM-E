@@ -14,7 +14,7 @@ use crate::scripts::{
     utils::{check_init, get_config, write_config},
 };
 
-use sam_e_types::{cloudformation::Resource, config::Lambda};
+use sam_e_types::{cloudformation::Resource, config::{runtime::RuntimeBuilder, Lambda}};
 
 use serde::Deserialize;
 use tracing::{debug, info};
@@ -94,7 +94,32 @@ pub fn build() -> anyhow::Result<()> {
         .into_iter()
         .chain(lambdas_with_builds)
         .collect();
+
+    let use_api_source = &combined_lambdas
+        .iter()
+        .any(|l| l.get_events().iter().any(|e| e.get_api_properties().is_some()));
+    let use_queue_source = &combined_lambdas
+        .iter()
+        .any(|l| l.get_events().iter().any(|e| e.get_sqs_properties().is_some()));
+
     config.set_lambdas(combined_lambdas);
+    
+    // TODO: this needs a cleanup
+    let runtime_clone = config.get_runtime().clone();
+    let current_templates_clone = runtime_clone.get_templates().clone();
+    let template_locations_as_strings = current_templates_clone
+        .iter()
+        .map(|t| t.get_location().to_string())
+        .collect::<Vec<_>>();
+
+    let new_runtime = RuntimeBuilder::new()
+        .with_templates(template_locations_as_strings)
+        .with_use_api_source(*use_api_source)
+        .with_use_queue_source(*use_queue_source)
+        .with_use_s3_source(false)
+        .build();
+    
+    config.set_runtime(new_runtime);
 
     debug!("Config post build: {:#?}", config);
 

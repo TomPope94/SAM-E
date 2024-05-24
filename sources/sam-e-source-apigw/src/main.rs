@@ -29,8 +29,16 @@ async fn main() -> anyhow::Result<()> {
     let config: Config = serde_yaml::from_str(&config_env_string)?;
     debug!("Configuration read successfully");
 
+    if config.get_runtime().get_use_api_source() {
+        debug!("Using the API source as specified in config...");
+    } else {
+        debug!("API source not specified in config, exiting...");
+        return Ok(());
+    }
+
     debug!("Creating the API state");
     let api_state = data::ApiState::from_config(&config);
+
 
     debug!("Setting up the API routes");
     let app = Router::new()
