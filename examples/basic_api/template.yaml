@@ -55,91 +55,91 @@ Resources:
           TEST_VAR: testing
           TEST_SECOND: 
             Ref: Domain
-
-  TestRust:
-    Type: AWS::Serverless::Function
-    Properties:
-      PackageType: Image
-      Architectures:
-        - arm64      
-      ImageUri: test-rust
-      Events:
-        Main:
-          Type: Api
-          Properties:
-            Path: /test-rust-route
-            Method: ANY
-  TestLambdaNode:
-    Type: AWS::Serverless::Function
-    Properties:
-      PackageType: Image
-      Architectures:
-        - arm64      
-      ImageUri: test-lambda-node
-      Events:
-        Main:
-          Type: Api
-          Properties:
-            Path: /test-lambda-node-route
-            Method: ANY
-  TestS3Upload:
-    Type: AWS::Serverless::Function
-    Properties:
-      PackageType: Image
-      Architectures:
-        - arm64      
-      ImageUri: test-s3-upload
-      Events:
-        MySQSEvent:
-          Type: SQS
-          Properties:
-            Queue: 
-              Fn::GetAtt: TestDeliverySQS.Arn
-            BatchSize: 10
-  TestDeliverySQS:
-    Type: AWS::SQS::Queue
-    Properties:
-      QueueName: TestDeliverySQS
-
-  TestANewDeliverySQS:
-    Type: AWS::SQS::Queue
-    Properties:
-      QueueName: TestANewDeliverySQS
-
-  DBInstance:
-    Type: AWS::RDS::DBInstance
-    Properties:
-      Engine: aurora-postgresql
-      DBInstanceClass: db.serverless
-      DBClusterIdentifier: Ref DBCluster
-
-  HardcodedNameBucket:
-    Type: "AWS::S3::Bucket"
-    Properties:
-      BucketName: test-bucket-001
-      AccessControl: Private
-      NotificationConfiguration:
-        QueueConfigurations:
-          - Event: s3:ObjectCreated:Put
-            Queue: TestDeliverySQS
-      PublicAccessBlockConfiguration:
-        BlockPublicAcls: true
-        IgnorePublicAcls: true
-        BlockPublicPolicy: true
-        RestrictPublicBuckets: true
-
-  DynamicNameBucket:
-    Type: "AWS::S3::Bucket"
-    Properties:
-      # BucketName: !Sub "${EnvironmentName}-test-bucket"
-      BucketName: 
-        Fn::Sub: 
-          - "${EnvironmentName}-test-bucket"
-          - EnvironmentName:
-              Ref: EnvironmentName
-      AccessControl: Private
-      PublicAccessBlockConfiguration:
-        BlockPublicAcls: true
-        IgnorePublicAcls: true
-        BlockPublicPolicy: true
-        RestrictPublicBuckets: true
+  #
+  # TestRust:
+  #   Type: AWS::Serverless::Function
+  #   Properties:
+  #     PackageType: Image
+  #     Architectures:
+  #       - arm64      
+  #     ImageUri: test-rust
+  #     Events:
+  #       Main:
+  #         Type: Api
+  #         Properties:
+  #           Path: /test-rust-route
+  #           Method: ANY
+  # TestLambdaNode:
+  #   Type: AWS::Serverless::Function
+  #   Properties:
+  #     PackageType: Image
+  #     Architectures:
+  #       - arm64      
+  #     ImageUri: test-lambda-node
+  #     Events:
+  #       Main:
+  #         Type: Api
+  #         Properties:
+  #           Path: /test-lambda-node-route
+  #           Method: ANY
+  # TestS3Upload:
+  #   Type: AWS::Serverless::Function
+  #   Properties:
+  #     PackageType: Image
+  #     Architectures:
+  #       - arm64      
+  #     ImageUri: test-s3-upload
+  #     Events:
+  #       MySQSEvent:
+  #         Type: SQS
+  #         Properties:
+  #           Queue: 
+  #             Fn::GetAtt: TestDeliverySQS.Arn
+  #           BatchSize: 10
+  # TestDeliverySQS:
+  #   Type: AWS::SQS::Queue
+  #   Properties:
+  #     QueueName: TestDeliverySQS
+  #
+  # TestANewDeliverySQS:
+  #   Type: AWS::SQS::Queue
+  #   Properties:
+  #     QueueName: TestANewDeliverySQS
+  #
+  # DBInstance:
+  #   Type: AWS::RDS::DBInstance
+  #   Properties:
+  #     Engine: aurora-postgresql
+  #     DBInstanceClass: db.serverless
+  #     DBClusterIdentifier: Ref DBCluster
+  #
+  # HardcodedNameBucket:
+  #   Type: "AWS::S3::Bucket"
+  #   Properties:
+  #     BucketName: test-bucket-001
+  #     AccessControl: Private
+  #     NotificationConfiguration:
+  #       QueueConfigurations:
+  #         - Event: s3:ObjectCreated:Put
+  #           Queue: TestDeliverySQS
+  #     PublicAccessBlockConfiguration:
+  #       BlockPublicAcls: true
+  #       IgnorePublicAcls: true
+  #       BlockPublicPolicy: true
+  #       RestrictPublicBuckets: true
+  #
+  # DynamicNameBucket:
+  #   Type: "AWS::S3::Bucket"
+  #   Properties:
+  #     # BucketName: !Sub "${EnvironmentName}-test-bucket"
+  #     BucketName: 
+  #       Fn::Sub: 
+  #         - "${EnvironmentName}-test-bucket"
+  #         - EnvironmentName:
+  #             Ref: EnvironmentName
+  #     AccessControl: Private
+  #     PublicAccessBlockConfiguration:
+  #       BlockPublicAcls: true
+  #       IgnorePublicAcls: true
+  #       BlockPublicPolicy: true
+  #       RestrictPublicBuckets: true

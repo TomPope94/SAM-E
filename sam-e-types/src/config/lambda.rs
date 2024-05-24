@@ -250,6 +250,13 @@ impl Event {
         }
     }
 
+    pub fn get_sqs_properties(&self) -> Option<&EventSqsProperties> {
+        match &self.properties {
+            Some(EventProperties::Sqs(sqs_properties)) => Some(sqs_properties),
+            _ => None,
+        }
+    }
+
     pub fn get_properties(&self) -> Option<&EventProperties> {
         self.properties.as_ref()
     }

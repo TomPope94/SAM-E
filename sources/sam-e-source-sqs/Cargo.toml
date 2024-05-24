@@ -1,18 +1,16 @@
 [package]
-name = "sam-e-invoker"
-version = "0.5.0"
+name = "sam-e-source-sqs"
+version = "0.1.0"
+description = "Polls the SQS queue(s) and invokes Lambdas using the custom SAM-E invoker"
 edition = "2021"
-
-# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
 [dependencies]
 anyhow = "1.0.79"
 aws-config = { version = "1.1.5", features = ["behavior-version-latest"] }
 aws_lambda_events = "0.13.0"
-axum = { version = "0.7.4", features = ["macros"] }
+aws-sdk-sqs = "1.13.0"
+reqwest = { version = "0.11.25", features = ["rustls-tls", "json"], default-features = false }
 chrono = { version = "0.4.32", features = ["serde"] }
-fancy-regex = "0.13.0"
-parking_lot = { version = "0.12.1", features = ["deadlock_detection"] }
 serde = "1.0"
 serde_json = "1.0"
 serde_yaml = "0.9.31"
@@ -22,5 +20,4 @@ tracing = { version = "0.1", features = ["log"] }
 tracing-subscriber = { version = "0.3", default-features = false, features = ["ansi", "fmt", "env-filter"] }
 uuid = { version = "1.7.0", features = ["v4", "serde"] }
 
-# in-house crates
-sam-e-types = { path = "../sam-e-types" }
+sam-e-types = { path = "../../sam-e-types" }

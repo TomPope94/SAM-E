@@ -1,0 +1,53 @@
+Transform: AWS::Serverless-2016-10-31
+
+Parameters:
+  EnvironmentName:
+    Description: The environment name is determined by the current branch you are deploying from.
+    Type: String
+    Default: staging
+
+Resources:
+  TestS3Upload:
+    Type: AWS::Serverless::Function
+    Properties:
+      PackageType: Image
+      Architectures:
+        - arm64      
+      ImageUri: test-s3-upload
+      Events:
+        MySQSEvent:
+          Type: SQS
+          Properties:
+            Queue: !GetAtt TestDeliverySQS.Arn
+            BatchSize: 10
+
+  TestDeliverySQS:
+    Type: AWS::SQS::Queue
+    Properties:
+      QueueName: TestDeliverySQS
+
+  TestBucketOne:
+    Type: "AWS::S3::Bucket"
+    Properties:
+      BucketName: test-bucket-001
+      AccessControl: Private
+      NotificationConfiguration:
+        QueueConfigurations:
+          - Event: s3:ObjectCreated:Put
+            Queue: TestDeliverySQS
+      PublicAccessBlockConfiguration:
+        BlockPublicAcls: true
+        IgnorePublicAcls: true
+        BlockPublicPolicy: true
+        RestrictPublicBuckets: true
+
+  TestBucketTwo:
+    Type: "AWS::S3::Bucket"
+    Properties:
+      BucketName: test-bucket-002
+      AccessControl: Private
+      PublicAccessBlockConfiguration:
+        BlockPublicAcls: true
+        IgnorePublicAcls: true
+        BlockPublicPolicy: true
+        RestrictPublicBuckets: true
