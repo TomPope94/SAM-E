@@ -1,6 +1,6 @@
 use sam_e_types::config::{runtime::RuntimeBuilder, Config};
 
-use std::{env, fs};
+use std::{env, fs, collections::HashMap};
 use tracing::{debug, info, warn};
 
 use crate::scripts::{
@@ -36,6 +36,10 @@ pub fn init() -> anyhow::Result<()> {
         .collect::<Vec<String>>();
     debug!("Selected YAML files: {:?}", selected_as_str);
 
+    let credentials_location = dialoguer::Input::<String>::new()
+        .with_prompt("Please enter the location of your AWS credentials file (this will be passed via docker volume to each Lambda)")
+        .interact()?;
+
     let sam_e_directory_path = get_sam_e_directory_path()?;
     info!("Creating SAM-E directory at: {:?}", sam_e_directory_path);
     fs::create_dir(&sam_e_directory_path)?;
@@ -43,9 +47,10 @@ pub fn init() -> anyhow::Result<()> {
 
     let new_runtime = RuntimeBuilder::new()
         .with_templates(selected_as_str)
+        .with_credentials_location(credentials_location)
         .build();
 
-    let new_config = Config::new(vec![], new_runtime, vec![], None);
+    let new_config = Config::new(vec![], HashMap::new(), new_runtime, vec![], None);
     let config_string = serde_yaml::to_string(&new_config)?;
 
     let sam_e_config_path = format!("{}/sam-e-config.yaml", sam_e_directory_path);

@@ -1,4 +1,3 @@
-use sam_e_types::config::Config;
 use std::{env, fs};
 use tracing::{debug, info};
 
@@ -11,7 +10,7 @@ pub fn add() -> anyhow::Result<()> {
     info!("Adding a new template to the list of templates");
 
     check_init()?;
-    let config = get_config()?;
+    let mut config = get_config()?;
     let mut runtime = config.get_runtime().clone();
     let templates = runtime.get_templates();
     let template_locations = templates
@@ -39,13 +38,8 @@ pub fn add() -> anyhow::Result<()> {
     }
 
     let sam_e_directory_path = get_sam_e_directory_path()?;
-    let new_config = Config::new(
-        config.get_lambdas().clone(),
-        runtime,
-        config.get_infrastructure().clone(),
-        None,
-    );
-    let config_string = serde_yaml::to_string(&new_config)?;
+    config.set_runtime(runtime);
+    let config_string = serde_yaml::to_string(&config)?;
 
     let sam_e_config_path = format!("{}/sam-e-config.yaml", sam_e_directory_path);
     info!("Updating SAM-E config file at: {:?}", sam_e_config_path);

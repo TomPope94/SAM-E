@@ -31,23 +31,21 @@ services:
     init: true
     image: tompope94/sam-e-invoker
     environment:
-      - RUST_LOG=aws_smithy_http=debug,aws_config=debug,aws_sigv4=debug,app=info
+      - RUST_LOG=sam_e_invoker=debug,sam_e_source_apigw=debug,sam_e_source_sqs=debug,sam_e_source_s3=debug
       - CONFIG=$CONFIG
+    {%- if sqs_volume %}
     depends_on:
       - sqs-local
+    {%- endif %}
     networks:
       - development
     ports:
       - 3030:3030
-      {%- if runtime.use_api_source %}
       - 3000:3000
-      {%- endif %}
-      {%- if runtime.use_s3_source %}
       - 3001:3001
-      {%- endif %}
     mem_limit: 250m
     volumes:
-      - /home/ubuntu/.aws/credentials:/root/.aws/credentials:ro
+      - {{runtime.credentials_location}}:/root/.aws/credentials:ro
 
   # *********************** Custom lambdas ***************************
   # Each of the lambda functions is run as a separate docker container that will communicate with the local invoker
@@ -75,7 +73,9 @@ services:
       - AWS_LAMBDA_LOG_GROUP_NAME=aws/lambda/{{lambda.name}}
       {% for key, value in lambda.environment_vars -%}
       - {{key}}={{value}}
-      {% endfor -%}
+      {%- endfor %}
+    volumes:
+      - {{runtime.credentials_location}}:/root/.aws/credentials:ro
 {% endfor %}
 
 {%- if frontend %}

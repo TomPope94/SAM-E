@@ -18,14 +18,8 @@ use lambda_http::{
     Error,
 };
 use serde_json::{json, Value};
-use tracing::{error, info};
+use tracing::info;
 use tracing_subscriber::EnvFilter;
-
-use aws_config::{
-    profile::ProfileFileCredentialsProvider, 
-    BehaviorVersion,
-};
-use aws_sdk_sqs::{config::Region, Client};
 
 async fn root() -> Json<Value> {
     info!("root() called");

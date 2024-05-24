@@ -10,6 +10,7 @@ pub struct Runtime {
     use_api_source: bool,
     use_queue_source: bool,
     use_s3_source: bool,
+    credentials_location: String,
 }
 
 impl Default for Runtime {
@@ -19,6 +20,7 @@ impl Default for Runtime {
             use_api_source: false,
             use_queue_source: false,
             use_s3_source: false,
+            credentials_location: String::from(""),
         }
     }
 }
@@ -61,6 +63,10 @@ impl Runtime {
     pub fn set_use_s3_source(&mut self, use_s3_source: bool) {
         self.use_s3_source = use_s3_source;
     }
+
+    pub fn get_credentials_location(&self) -> &String {
+        &self.credentials_location
+    }
 }
 
 pub struct RuntimeBuilder {
@@ -68,6 +74,7 @@ pub struct RuntimeBuilder {
     use_api_source: bool,
     use_queue_source: bool,
     use_s3_source: bool,
+    credentials_location: Option<String>,
 }
 
 impl RuntimeBuilder {
@@ -77,6 +84,7 @@ impl RuntimeBuilder {
             use_api_source: false,
             use_queue_source: false,
             use_s3_source: false,
+            credentials_location: None,
         }
     }
 
@@ -104,12 +112,22 @@ impl RuntimeBuilder {
         self
     }
 
+    pub fn with_credentials_location(mut self, credentials_location: String) -> Self {
+        self.credentials_location = Some(credentials_location);
+        self
+    }
+
     pub fn build(self) -> Runtime {
+        let Some(credentials_location) = self.credentials_location else {
+            panic!("Credentials location must be set");
+        };
+
         Runtime {
             templates: self.templates,
             use_api_source: self.use_api_source,
             use_queue_source: self.use_queue_source,
             use_s3_source: self.use_s3_source,
+            credentials_location,
         }
     }
 }
