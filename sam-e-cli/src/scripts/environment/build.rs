@@ -114,6 +114,7 @@ pub fn build() -> anyhow::Result<()> {
 
     let new_runtime = RuntimeBuilder::new()
         .with_templates(template_locations_as_strings)
+        .with_credentials_location(runtime_clone.get_credentials_location().to_owned())
         .with_use_api_source(*use_api_source)
         .with_use_queue_source(*use_queue_source)
         .with_use_s3_source(false)

@@ -11,12 +11,14 @@ use infrastructure::Triggers;
 use lambda::event::EventProperties;
 use frontend::Frontend;
 use serde::{Deserialize, Serialize};
+use std::collections::HashMap;
 
 /// The overall config construct for the SAM-E environment
 /// Will be used to drive the local runtime and the deployment process
 #[derive(Debug, Deserialize, Serialize, Clone)]
 pub struct Config {
     lambdas: Vec<Lambda>,
+    lambda_groups: HashMap<String, Vec<String>>,
     runtime: Runtime,
     infrastructure: Vec<Infrastructure>,
     frontend: Option<Frontend>,
@@ -25,12 +27,14 @@ pub struct Config {
 impl Config {
     pub fn new(
         lambdas: Vec<Lambda>,
+        lambda_groups: HashMap<String, Vec<String>>,
         runtime: Runtime,
         infrastructure: Vec<Infrastructure>,
         frontend: Option<Frontend>,
     ) -> Self {
         Self {
             lambdas,
+            lambda_groups,
             runtime,
             infrastructure,
             frontend,
@@ -98,5 +102,13 @@ impl Config {
 
     pub fn set_frontend(&mut self, frontend: Frontend) {
         self.frontend = Some(frontend);
+    }
+
+    pub fn get_lambda_groups(&self) -> &HashMap<String, Vec<String>> {
+        &self.lambda_groups
+    }
+
+    pub fn set_lambda_groups(&mut self, lambda_groups: HashMap<String, Vec<String>>) {
+        self.lambda_groups = lambda_groups;
     }
 }

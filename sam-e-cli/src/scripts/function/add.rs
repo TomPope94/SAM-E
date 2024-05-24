@@ -6,7 +6,7 @@ use crate::scripts::{
     utils::{check_init, get_config, get_sam_e_directory_path},
 };
 
-use sam_e_types::config::{Config, Lambda};
+use sam_e_types::config::Lambda;
 use std::fs;
 use tracing::{debug, info};
 
@@ -14,7 +14,7 @@ pub fn add() -> anyhow::Result<()> {
     info!("Adding a new lambda to the SAM-E environment");
 
     check_init()?;
-    let config = get_config()?;
+    let mut config = get_config()?;
 
     let template_locations = config.get_runtime().get_templates();
     let resources = parse_templates_into_resources(template_locations)?;
@@ -48,13 +48,8 @@ pub fn add() -> anyhow::Result<()> {
     let mut lambdas_with_builds = add_build_settings(lambdas_with_env);
     current_lambdas.append(&mut lambdas_with_builds);
 
-    let new_config = Config::new(
-        current_lambdas,
-        config.get_runtime().clone(),
-        config.get_infrastructure().clone(),
-        None,
-    );
-    let config_string = serde_yaml::to_string(&new_config)?;
+    config.set_lambdas(current_lambdas);
+    let config_string = serde_yaml::to_string(&config)?;
 
     let sam_e_directory_path = get_sam_e_directory_path()?;
     let sam_e_config_path = format!("{}/sam-e-config.yaml", sam_e_directory_path);

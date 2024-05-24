@@ -67,6 +67,9 @@ pub enum FrontendCommand {
 pub enum FunctionCommand {
     #[command(about = "Add a new function from the template list to the local environment")]
     Add,
+
+    #[clap(subcommand)]
+    Group(FunctionGroupCommand),
 }
 
 #[derive(Debug, Subcommand)]
@@ -87,4 +90,16 @@ pub enum EnvironmentCommand {
     Start(StartArgs),
     #[command(about = "Stop the SAM-E environment")]
     Stop,
+}
+
+#[derive(Debug, Subcommand)]
+pub enum FunctionGroupCommand {
+    #[command(about = "Create a new function group to the local environment")]
+    Create,
+    #[command(about = "Delete a function group from the local environment (won't delete the functions)")]
+    Delete,
+    #[command(about = "Add a function to a function group")]
+    Add,
+    #[command(about = "Remove a function from a function group")]
+    Remove,
 }

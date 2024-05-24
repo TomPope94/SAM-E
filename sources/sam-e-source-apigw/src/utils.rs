@@ -1,4 +1,4 @@
-use sam_e_types::config::lambda::{Event, EventProperties, Lambda};
+use sam_e_types::config::lambda::{event::Event, event::EventProperties, Lambda};
 use anyhow::{anyhow, Result};
 use axum::{
     extract::Json,

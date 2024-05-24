@@ -1,3 +1,4 @@
+[workspace]
 [package]
 name = "test-axum"
 version = "0.1.0"

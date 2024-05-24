@@ -18,7 +18,7 @@ pub async fn start(args: StartArgs) -> anyhow::Result<()> {
 
     let selection = dialoguer::Select::new()
         .with_prompt("Which part of the envioronment would you like to start?")
-        .items(&["Infrastructure", "Functions", "Frontend", "All"])
+        .items(&["Infrastructure", "All Functions", "Function Group", "Frontend"])
         .default(0)
         .interact()?;
 
@@ -76,8 +76,41 @@ pub async fn start(args: StartArgs) -> anyhow::Result<()> {
             }
 
             cmd_str
-        }
+        },
         2 => {
+            let function_groups = config.get_lambda_groups();
+            let function_group_names = function_groups.keys().collect::<Vec<_>>();
+
+            if function_group_names.is_empty() {
+                error!("No function groups found. Please create a function group first using `sam-e function group create`");
+                return Err(anyhow::Error::msg("No function groups found"));
+            }
+
+            let selection = dialoguer::Select::new()
+                .with_prompt("Which function group would you like to start?")
+                .items(&function_group_names)
+                .default(0)
+                .interact()?;
+            let function_group_name = function_group_names[selection].clone();
+            let chosen_group = function_groups.get(&function_group_name).unwrap();
+
+            if chosen_group.is_empty() {
+                error!("No functions found in the group. Exiting...");
+                return Err(anyhow::Error::msg("No functions found in the group"));
+            }
+
+            info!("Starting all functions for group: {}", function_group_name);
+
+            let mut cmd_str =
+                "docker compose --compatibility up --remove-orphans --build ".to_string();
+            for function_name in chosen_group {
+                cmd_str.push_str(function_name);
+                cmd_str.push(' ');
+            }
+
+            cmd_str
+        },
+        3 => {
             info!("Starting the frontend...");
             let frontend = config.get_frontend();
 
@@ -93,10 +126,6 @@ pub async fn start(args: StartArgs) -> anyhow::Result<()> {
                 warn!("No frontend found in the configuration. Please run `sam-e frontend add` to add one.");
                 return Err(anyhow::Error::msg("No frontend found in the configuration"));
             }
-        }
-        3 => {
-            info!("Starting the entire environment...");
-            "docker compose --compatibility up --remove-orphans --build".to_string()
         }
         _ => {
             error!("Invalid selection, cancelling start...");
