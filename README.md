@@ -17,6 +17,12 @@ If you're curious about the name, SAM-E stands for SAM (Serverless Application M
 
 ## How do I use SAM-E?
 
+### Dependencies
+
+There are a number of dependencies you need before you can use the tool:
+* Rust - you can install this via [rustup](https://rustup.rs/)
+* Docker - you can install this via [Docker Desktop](https://www.docker.com/products/docker-desktop)
+
 To use SAM-E, you'll need to install the CLI. There are a few options for you to do this:
 
 ```bash
