@@ -30,7 +30,7 @@ To use SAM-E, you'll need to install the CLI. There are a few options for you to
 cargo install --path sam-e-cli
 
 # Use the build script
-./build.sh
+./build_cli.sh
 ```
 
 Once you have the CLI installed, follow the steps highlighted in the [CLI README](./sam-e-cli/) to get started.

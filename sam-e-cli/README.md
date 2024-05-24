@@ -27,7 +27,7 @@ cp target/release/sam-e-cli /usr/local/bin/sam-e
 For ease of use, you can also use the build script to build the CLI from the root SAM-E directory:
 
 ```bash
-./build.sh
+./build_cli.sh
 ```
 
 Note: this may be different if operating on a Windows machine.
