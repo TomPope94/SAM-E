@@ -1,7 +1,7 @@
 [workspace]
 resolver = '2'
 members = [
-  'sam-e-invoker-new',
+  'sam-e-invoker',
   'sources/sam-e-source-apigw',
   'sources/sam-e-source-sqs',
   'sources/sam-e-source-s3',

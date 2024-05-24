@@ -1,6 +1,6 @@
 use std::collections::HashMap;
 
-use crate::config::lambda::DockerBuild;
+use crate::config::lambda::docker::DockerBuild;
 use serde::{Deserialize, Serialize};
 
 #[derive(Debug, Deserialize, Serialize, Clone)]
