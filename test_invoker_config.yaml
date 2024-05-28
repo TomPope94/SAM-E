@@ -1,0 +1,37 @@
+lambdas:
+- name: TestAxum
+  image: test-axum
+  environment_vars:
+    TEST_VAR: testing
+  events:
+  - properties:
+      type: api
+      path: /{path+}
+      base_path: axum
+      method: ANY
+      route_regex: ^/axum/(?P<path>.*)$
+  - properties:
+      type: api
+      path: /
+      method: ANY
+      route_regex: ^/$
+  template_name: 586d3489-a539-4f64-923c-46ab83e43d7e
+  package_type: Image
+  docker_build:
+    dockerfile: Dockerfile
+    context: ../test-axum
+    use_ssh: false
+lambda_groups:
+  testing: []
+  another_test:
+  - TestAxum
+runtime:
+  templates:
+  - name: 98b6461c-134c-4b04-ad3a-a7b550973b11
+    location: /Users/tompope/Work/sam-e/examples/basic_api/template.yaml
+  use_api_source: true
+  use_queue_source: false
+  use_s3_source: false
+  credentials_location: /home/ubuntu/.aws/credentials
+infrastructure: []
+frontend: null

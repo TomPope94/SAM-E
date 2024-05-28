@@ -7,5 +7,6 @@
 /app/release/sam-e-source-apigw &
 /app/release/sam-e-source-sqs &
 /app/release/sam-e-source-s3 &
+/app/release/sam-e-source-eventbridge &
 
 wait

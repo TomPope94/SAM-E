@@ -5,6 +5,7 @@ members = [
   'sources/sam-e-source-apigw',
   'sources/sam-e-source-sqs',
   'sources/sam-e-source-s3',
+  'sources/sam-e-source-eventbridge',
   'sam-e-types'
 ]
 exclude = [
