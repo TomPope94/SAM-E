@@ -1,12 +1,9 @@
-pub mod request;
 pub mod data;
-pub mod response;
 pub mod middleware;
+pub mod request;
+pub mod response;
 
-use axum::{
-    routing::post,
-    Router,
-};
+use axum::{routing::post, Router};
 
 use tracing::{debug, info};
 use tracing_subscriber::EnvFilter;
@@ -28,9 +25,14 @@ async fn main() -> anyhow::Result<()> {
     let config: Config = serde_yaml::from_str(&config_env_string)?;
     debug!("Configuration read successfully");
 
+    debug!("Setting up the event store");
+    let event_store = data::store::EventStore::from_config(&config);
+    debug!("Event store setup successfully");
+
     debug!("Setting up the eventbridge API routes");
     let app = Router::new()
-        .route("/", post(request::handler));
+        .route("/", post(request::handler))
+        .with_state(event_store);
 
     let listener = tokio::net::TcpListener::bind("0.0.0.0:3002").await.unwrap();
     info!("Listening on: {}", listener.local_addr().unwrap());
@@ -38,6 +40,3 @@ async fn main() -> anyhow::Result<()> {
 
     Ok(())
 }
-
-
-

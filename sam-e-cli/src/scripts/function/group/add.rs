@@ -1,6 +1,6 @@
-use tracing::{debug, error, info};
 use crate::scripts::utils::{check_init, get_config, get_sam_e_directory_path};
 use std::fs;
+use tracing::{debug, error, info};
 
 /// Add one or more functions to a previously created function group
 pub async fn add_function() -> anyhow::Result<()> {
@@ -24,13 +24,19 @@ pub async fn add_function() -> anyhow::Result<()> {
     let mut chosen_group_lambdas = lambda_groups[&chosen_group_name].clone();
 
     let lambdas = config.get_lambdas();
-    let lambda_names = lambdas.iter().map(|lambda| lambda.get_name()).collect::<Vec<_>>();
+    let lambda_names = lambdas
+        .iter()
+        .map(|lambda| lambda.get_name())
+        .collect::<Vec<_>>();
     if lambda_names.is_empty() {
         error!("No lambdas found. Please create a lambda first using `sam-e function add`");
         return Ok(());
     }
 
-    let lambdas_not_in_group = lambda_names.into_iter().filter(|lambda_name| !chosen_group_lambdas.contains(&lambda_name.to_string())).collect::<Vec<_>>();
+    let lambdas_not_in_group = lambda_names
+        .into_iter()
+        .filter(|lambda_name| !chosen_group_lambdas.contains(&lambda_name.to_string()))
+        .collect::<Vec<_>>();
     if lambdas_not_in_group.is_empty() {
         error!("No lambdas found that are not already in the group. Exiting...");
         return Ok(());
@@ -69,4 +75,3 @@ pub async fn add_function() -> anyhow::Result<()> {
 
     Ok(())
 }
-

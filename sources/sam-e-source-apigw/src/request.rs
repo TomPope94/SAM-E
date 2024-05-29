@@ -10,9 +10,9 @@ use axum::{
     http::{HeaderMap, Method},
     response::{Html, IntoResponse},
 };
-use std::{str::FromStr, collections::HashMap};
-use uuid::Uuid;
+use std::{collections::HashMap, str::FromStr};
 use tracing::{debug, trace, warn};
+use uuid::Uuid;
 
 pub async fn handler(
     method: Method,
@@ -38,7 +38,8 @@ pub async fn handler(
         "/".to_string()
     };
 
-    let (matched_lambda, matched_event) = find_lambda_with_base_path(api_lambdas, &prepended_path, &method.to_string())?;
+    let (matched_lambda, matched_event) =
+        find_lambda_with_base_path(api_lambdas, &prepended_path, &method.to_string())?;
     let matched_api_props = matched_event.get_api_properties().unwrap().to_owned();
     trace!("Event lambda found: {:?}", &matched_lambda);
 
@@ -62,7 +63,8 @@ pub async fn handler(
 
     debug!("Now adding invocation to store");
     let client = api_state.get_client();
-    let response = client.post("http://0.0.0.0:3030/invoke")
+    let response = client
+        .post("http://0.0.0.0:3030/invoke")
         .json(&serde_json::json!(new_invocation))
         .send()
         .await?;
@@ -109,4 +111,3 @@ pub async fn handler(
         }
     }
 }
-

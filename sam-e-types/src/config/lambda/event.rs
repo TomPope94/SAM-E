@@ -66,7 +66,9 @@ impl Event {
 
     pub fn set_api_properties(&mut self, path: String, base_path: Option<String>, method: String) {
         let replaced_path = replaced_regex_path(&path, &base_path);
-        let route_regex = Regex::new(&replaced_path).expect("invalid regex").to_string();
+        let route_regex = Regex::new(&replaced_path)
+            .expect("invalid regex")
+            .to_string();
         let api_props = EventApiProperties {
             path,
             base_path,
@@ -137,4 +139,3 @@ fn replaced_regex_path(path: &str, base_path: &Option<String>) -> String {
         format!("^{}$", replaced_sam_path)
     }
 }
-

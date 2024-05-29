@@ -96,7 +96,9 @@ pub enum EnvironmentCommand {
 pub enum FunctionGroupCommand {
     #[command(about = "Create a new function group to the local environment")]
     Create,
-    #[command(about = "Delete a function group from the local environment (won't delete the functions)")]
+    #[command(
+        about = "Delete a function group from the local environment (won't delete the functions)"
+    )]
     Delete,
     #[command(about = "Add a function to a function group")]
     Add,

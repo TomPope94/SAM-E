@@ -28,7 +28,9 @@ async fn main() -> anyhow::Result<()> {
     let api_state = data::ApiState::from_config(&config).await;
 
     debug!("Setting up the webhook route");
-    let app = Router::new().route("/", post(webhook::handler)).with_state(api_state);
+    let app = Router::new()
+        .route("/", post(webhook::handler))
+        .with_state(api_state);
 
     let listener = tokio::net::TcpListener::bind("0.0.0.0:3001").await.unwrap();
     info!("listening on {}", listener.local_addr().unwrap());

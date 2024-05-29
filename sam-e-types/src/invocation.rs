@@ -22,8 +22,7 @@ pub enum EventRequest {
 }
 
 #[derive(Debug, Deserialize, Serialize, Clone)]
-pub struct Invocation
-{
+pub struct Invocation {
     request_id: Uuid,
     date_time: DateTime<Local>,
     status: Status,
@@ -39,7 +38,7 @@ impl Invocation {
             request_id: Uuid::new_v4(),
             date_time: Local::now(),
             status: Status::Pending,
-            request, 
+            request,
             response: ApiGatewayProxyResponse::default(),
             response_headers: HashMap::new(),
             lambda_name: String::new(),
@@ -77,7 +76,7 @@ impl Invocation {
     pub fn get_response_headers(&self) -> &HashMap<String, String> {
         &self.response_headers
     }
-    
+
     pub fn set_response_headers(&mut self, headers: HashMap<String, String>) {
         self.response_headers = headers;
     }
@@ -107,7 +106,7 @@ impl InvocationBuilder {
             request_id: Uuid::new_v4(),
             date_time: Local::now(),
             status: Status::Pending,
-            request: None, 
+            request: None,
             response: ApiGatewayProxyResponse::default(),
             response_headers: HashMap::new(),
             lambda_name: None,

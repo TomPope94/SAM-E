@@ -1,0 +1,90 @@
+Transform: AWS::Serverless-2016-10-31
+
+Resources:
+  # CREATES THE EVENTBRIDGE EVENT BUS 
+  EventBus:
+    Type: AWS::Events::EventBus
+    Properties:
+      Name: TestEventBus
+
+  # THE QUEUE WE WILL BE ADDING MESSAGES TO
+  TestDeliverySQS:
+    Type: AWS::SQS::Queue
+    Properties:
+      QueueName: TestDeliverySQS
+
+  # EVENTBRIDGE RULE THAT ADDS MESSAGE TO SQS
+  TestRule:
+    Type: AWS::Events::Rule
+    Properties:
+      Name: MyRule1
+      EventBusName: !Ref EventBus
+      EventPattern:
+        source:
+          - 'service.my_micro_service'
+      Targets:
+        - Id: TestDeliveryTarget
+          Arn: !GetAtt TestDeliverySQS.Arn
+
+  # CREATING LAMBDA FUNCTION TO TRIGGER FROM SQS
+  TestSQSHandler:
+    Type: AWS::Serverless::Function
+    Properties:
+      PackageType: Image
+      Architectures:
+        - arm64      
+      ImageUri: test-sqs-handler
+      Events:
+        MySQSEvent:
+          Type: SQS
+          Properties:
+            Queue: 
+              Fn::GetAtt: TestDeliverySQS.Arn
+            BatchSize: 10
+
+
+  # CREATING API LAMBDA FOR ADDING EVENT TO EVENT BUS
+  TestApiGateway:
+    Type: AWS::Serverless::Api
+    Properties:
+      Name: Test_Name
+      Description: Test
+      StageName: Prod
+    Domain:
+      DomainName: Test
+      CertificateArn: Test
+
+  AppApiDomainMapping:
+    Type: AWS::ApiGateway::BasePathMapping
+    Properties:
+      DomainName: Test
+      RestApiId: TestApiGateway
+      BasePath: eventbridge
+      Stage: 
+        Ref: TestApiGateway.Stage
+
+  TestSqsTrigger:
+    Type: AWS::Serverless::Function
+    Properties:
+      PackageType: Image
+      Architectures:
+        - arm64      
+      ImageUri: test-sqs-trigger
+      Events:
+        Index:
+          Type: Api
+          Properties:
+            RestApiId: TestApiGateway
+            Path: /
+            Method: ANY
+        Main:
+          Type: Api
+          Properties:
+            RestApiId: TestApiGateway
+            Path: /{path+}
+            Method: ANY
+      Timeout: 30
+      MemorySize: 50
+      Environment:
+        Variables:
+          TEST_VAR: testing

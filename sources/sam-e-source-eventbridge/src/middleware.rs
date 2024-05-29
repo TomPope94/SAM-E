@@ -2,10 +2,10 @@ use crate::data::{EventBridgeRequest, PutEventsRequest};
 
 use axum::{
     async_trait,
-    body::{Bytes, Body},
-    response::{Response, IntoResponse},
+    body::{Body, Bytes},
     extract::{FromRequest, Request},
     http::StatusCode,
+    response::{IntoResponse, Response},
 };
 
 use tracing::{debug, error};
@@ -20,15 +20,13 @@ where
     async fn from_request(req: Request, state: &S) -> Result<Self, Self::Rejection> {
         debug!("Parsing the EventBridge request middleware...");
         // Get the X-Amz-Target header value
-        let Some(target_header) = req
-            .headers()
-            .get("X-Amz-Target") else {
-                error!("No X-Amz-Target header found");
-                return Err(Response::builder()
-                    .status(StatusCode::BAD_REQUEST)
-                    .body(Body::empty())
-                    .unwrap());
-            };
+        let Some(target_header) = req.headers().get("X-Amz-Target") else {
+            error!("No X-Amz-Target header found");
+            return Err(Response::builder()
+                .status(StatusCode::BAD_REQUEST)
+                .body(Body::empty())
+                .unwrap());
+        };
         let Ok(target_header_str) = target_header.to_str() else {
             error!("X-Amz-Target header could not be parsed");
             return Err(Response::builder()
@@ -64,7 +62,8 @@ where
         match target_header_parts[1] {
             "PutEvents" => {
                 debug!("Detected a PutEvents request");
-                let Ok(put_events_request)= serde_json::from_str::<PutEventsRequest>(body_str) else {
+                let Ok(put_events_request) = serde_json::from_str::<PutEventsRequest>(body_str)
+                else {
                     error!("Body could not be parsed into a PutEventsRequest");
                     return Err(Response::builder()
                         .status(StatusCode::BAD_REQUEST)
@@ -72,15 +71,14 @@ where
                         .unwrap());
                 };
                 Ok(EventBridgeRequest::PutEvents(put_events_request))
-            },
+            }
             _ => {
                 error!("No matching target header found");
                 Err(Response::builder()
-                .status(StatusCode::BAD_REQUEST)
-                .body(Body::empty())
-                .unwrap())
+                    .status(StatusCode::BAD_REQUEST)
+                    .body(Body::empty())
+                    .unwrap())
             }
         }
     }
 }
-

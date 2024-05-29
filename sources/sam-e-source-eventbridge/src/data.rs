@@ -1,3 +1,5 @@
+pub mod store;
+
 use serde::{Deserialize, Serialize};
 
 #[derive(Debug)]
@@ -5,14 +7,14 @@ pub enum EventBridgeRequest {
     PutEvents(PutEventsRequest),
 }
 
-#[derive(Debug, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize)]
 #[serde(rename_all = "PascalCase")]
 pub struct PutEventsRequest {
     pub entries: Vec<PutEventsRequestEntry>,
 }
 
 // This should come from the aws-sdk-eventbridge crate but it doesn't implement the Deserialize/Serialize traits
-#[derive(Debug, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize)]
 #[serde(rename_all = "PascalCase")]
 pub struct PutEventsRequestEntry {
     pub time: Option<String>, // TODO: Change to DateTime

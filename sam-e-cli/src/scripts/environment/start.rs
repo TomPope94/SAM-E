@@ -1,4 +1,4 @@
-use sam_e_types::config::infrastructure::InfrastructureType;
+use sam_e_types::config::infrastructure::Infrastructure;
 use std::process::Command;
 use tracing::{debug, error, info, warn};
 
@@ -18,7 +18,12 @@ pub async fn start(args: StartArgs) -> anyhow::Result<()> {
 
     let selection = dialoguer::Select::new()
         .with_prompt("Which part of the envioronment would you like to start?")
-        .items(&["Infrastructure", "All Functions", "Function Group", "Frontend"])
+        .items(&[
+            "Infrastructure",
+            "All Functions",
+            "Function Group",
+            "Frontend",
+        ])
         .default(0)
         .interact()?;
 
@@ -35,28 +40,27 @@ pub async fn start(args: StartArgs) -> anyhow::Result<()> {
             let mut use_postgres = false;
             let mut use_sqs = false;
             for service in infrastructure {
-                let service_type = service.get_infrastructure_type();
-                match service_type {
-                    InfrastructureType::S3 => {
+                match service {
+                    Infrastructure::S3(_) => {
                         if !use_s3 {
                             cmd_str.push_str("s3-local ");
                         }
                         use_s3 = true;
                     }
-                    InfrastructureType::Postgres => {
+                    Infrastructure::Postgres(_) => {
                         if !use_postgres {
                             cmd_str.push_str("postgres-local ");
                         }
                         use_postgres = true;
                     }
-                    InfrastructureType::Sqs => {
+                    Infrastructure::Sqs(_) => {
                         if !use_sqs {
                             cmd_str.push_str("sqs-local ");
                         }
                         use_sqs = true;
                     }
                     _ => {
-                        warn!("Unsupported infrastructure type: {:?}", service_type);
+                        warn!("Unsupported infrastructure type detected. Skipping...");
                         continue;
                     }
                 }
@@ -76,7 +80,7 @@ pub async fn start(args: StartArgs) -> anyhow::Result<()> {
             }
 
             cmd_str
-        },
+        }
         2 => {
             let function_groups = config.get_lambda_groups();
             let function_group_names = function_groups.keys().collect::<Vec<_>>();
@@ -109,7 +113,7 @@ pub async fn start(args: StartArgs) -> anyhow::Result<()> {
             }
 
             cmd_str
-        },
+        }
         3 => {
             info!("Starting the frontend...");
             let frontend = config.get_frontend();
