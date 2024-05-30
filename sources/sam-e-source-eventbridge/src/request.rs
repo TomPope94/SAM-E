@@ -10,7 +10,7 @@ use crate::{
 
 use axum::{
     extract::State,
-    response::IntoResponse,
+    response::{IntoResponse, Json},
 };
 use tracing::debug;
 
@@ -22,9 +22,9 @@ pub async fn handler(
     match event_bridge_request {
         EventBridgeRequest::PutEvents(put_events_request) => {
             debug!("Recognised a put events request");
-            put_events::put_events_handler(put_events_request, &event_store).await?;
+            let event_response = put_events::put_events_handler(put_events_request, &event_store).await?;
 
-            Ok("PutEvents request handled successfully".into_response())
+            Ok(Json(event_response))
         }
     }
 }
