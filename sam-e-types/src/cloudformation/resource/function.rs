@@ -1,4 +1,6 @@
-use crate::cloudformation::resource::Event;
+pub mod event;
+use event::Event;
+
 use serde::{Deserialize, Serialize};
 use serde_yaml::Value;
 use std::collections::HashMap;

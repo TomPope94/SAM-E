@@ -6,7 +6,7 @@ use axum::{
     extract::{Json, State},
     response::IntoResponse,
 };
-use sam_e_types::config::infrastructure::{Infrastructure, InfrastructureType};
+use sam_e_types::config::infrastructure::Infrastructure;
 use tracing::{debug, error, info, trace, warn};
 
 pub async fn handler(State(api_state): State<ApiState>, body: Json<S3Event>) -> impl IntoResponse {
@@ -20,39 +20,39 @@ pub async fn handler(State(api_state): State<ApiState>, body: Json<S3Event>) -> 
     let infrastructure = api_state.get_infrastructure();
 
     if let Some(bucket) = bucket_name {
-        let s3_buckets: Vec<&Infrastructure> = infrastructure
-            .iter()
-            .filter(|i| i.get_infrastructure_type() == &InfrastructureType::S3)
-            .collect();
+        for i in infrastructure.into_iter() {
+            match i {
+                Infrastructure::S3(s3_data) => {
+                    let props = &s3_data.properties;
+                    if props.name == bucket {
+                        let triggers = &props.triggers;
+                        if let Some(triggers) = triggers {
+                            trace!("Triggers: {:#?}", triggers);
 
-        for i in s3_buckets.into_iter() {
-            if i.get_name() == bucket {
-                info!("Found infrastructure for bucket: {}", bucket);
+                            if let Some(queues) = triggers.get_queues() {
+                                for queue in queues {
+                                    debug!("Detected queue trigger for: {}", queue);
+                                    handle_queue_trigger(
+                                        queue.as_str(),
+                                        &s3_event,
+                                        api_state.get_queue_client(),
+                                    )
+                                    .await;
+                                }
+                            }
 
-                let triggers = i.get_triggers();
-                if let Some(triggers) = triggers {
-                    trace!("Triggers: {:#?}", triggers);
-
-                    if let Some(queues) = triggers.get_queues() {
-                        for queue in queues {
-                            debug!("Detected queue trigger for: {}", queue);
-                            handle_queue_trigger(
-                                queue.as_str(),
-                                &s3_event,
-                                api_state.get_queue_client(),
-                            )
-                            .await;
-                        }
-                    }
-
-                    if let Some(lambdas) = triggers.get_lambdas() {
-                        for lambda in lambdas {
-                            debug!("Detected lambda trigger for: {}", lambda);
-                            warn!("Currently unsupported!");
+                            if let Some(lambdas) = triggers.get_lambdas() {
+                                for lambda in lambdas {
+                                    debug!("Detected lambda trigger for: {}", lambda);
+                                    warn!("Currently unsupported!");
+                                }
+                            }
                         }
                     }
                 }
+                _ => continue,
             }
+            info!("Found infrastructure for bucket: {}", bucket);
         }
     }
 

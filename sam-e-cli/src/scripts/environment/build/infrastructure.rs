@@ -1,7 +1,12 @@
 use sam_e_types::{
-    cloudformation::resource::{Bucket, DbInstance, ResourceType},
+    cloudformation::resource::{Bucket, DbInstance, EventBus, EventRule, ResourceType},
     config::{
-        infrastructure::{Infrastructure, InfrastructureType},
+        infrastructure::{
+            event_rule::{EventPatternBuilder, EventRuleBuilder},
+            triggers::Triggers,
+            EventBusBuilder, Infrastructure, MysqlBuilder, PostgresBuilder, QueueBuilder,
+            ResourceContainer, S3Builder,
+        },
         Config,
     },
 };
@@ -50,42 +55,49 @@ pub fn get_infrastructure_from_resources(
                 if let Some(engine) = db_props.get_engine().as_str() {
                     if engine.contains("postgresql") {
                         trace!("Database engine recognized as Postgres");
-                        infrastructure.push(Infrastructure::new(
-                            resource_name.to_string(),
-                            InfrastructureType::Postgres,
-                            resource.get_template_name(),
-                        ));
+                        let postgres_infra = PostgresBuilder::new()
+                            .name(resource_name.to_string())
+                            .template_name(resource.get_template_name().to_string())
+                            .build()?;
+                        infrastructure.push(Infrastructure::Postgres(ResourceContainer::new(
+                            postgres_infra,
+                        )));
                     } else if engine.contains("mysql") {
                         trace!("Database engine recognized as MySQL");
-                        infrastructure.push(Infrastructure::new(
-                            resource_name.to_string(),
-                            InfrastructureType::Mysql,
-                            resource.get_template_name(),
-                        ));
+                        let mysql_infra = MysqlBuilder::new()
+                            .name(resource_name.to_string())
+                            .template_name(resource.get_template_name().to_string())
+                            .build()?;
+                        infrastructure
+                            .push(Infrastructure::Mysql(ResourceContainer::new(mysql_infra)));
                     } else {
                         warn!("Not able to auto infer engine of DB instance: {}. Defaulting to Postgres", resource_name);
-                        infrastructure.push(Infrastructure::new(
-                            resource_name.to_string(),
-                            InfrastructureType::Postgres,
-                            resource.get_template_name(),
-                        ));
+                        let postgres_infra = PostgresBuilder::new()
+                            .name(resource_name.to_string())
+                            .template_name(resource.get_template_name().to_string())
+                            .build()?;
+                        infrastructure.push(Infrastructure::Postgres(ResourceContainer::new(
+                            postgres_infra,
+                        )));
                     }
                 } else {
                     warn!("No engine type found for DB instance or unable to parse into string: {}. Defaulting to Postgres", resource_name);
-                    infrastructure.push(Infrastructure::new(
-                        resource_name.to_string(),
-                        InfrastructureType::Postgres,
-                        resource.get_template_name(),
-                    ));
+                    let postgres_infra = PostgresBuilder::new()
+                        .name(resource_name.to_string())
+                        .template_name(resource.get_template_name().to_string())
+                        .build()?;
+                    infrastructure.push(Infrastructure::Postgres(ResourceContainer::new(
+                        postgres_infra,
+                    )));
                 }
             }
             ResourceType::Queue => {
                 trace!("Found a queue!");
-                infrastructure.push(Infrastructure::new(
-                    resource_name.to_string(),
-                    InfrastructureType::Sqs,
-                    resource.get_template_name(),
-                ));
+                let sqs_infra = QueueBuilder::new()
+                    .name(resource_name.to_string())
+                    .template_name(resource.get_template_name().to_string())
+                    .build()?;
+                infrastructure.push(Infrastructure::Sqs(ResourceContainer::new(sqs_infra)));
             }
             ResourceType::Bucket => {
                 trace!("Found a bucket!");
@@ -105,6 +117,88 @@ pub fn get_infrastructure_from_resources(
                     resource_name,
                     resource.get_template_name(),
                 )?);
+            }
+            ResourceType::EventBus => {
+                debug!("Found an event bus!");
+                let Ok(event_bus) =
+                    serde_yaml::from_value::<EventBus>(resource.get_resources().properties.clone())
+                else {
+                    warn!(
+                        "Unable to parse event bus properties for: {}. Skipping",
+                        resource_name
+                    );
+                    continue;
+                };
+
+                debug!("Properties: {:?}", event_bus);
+
+                let event_bus_name = if let Some(name) = event_bus.name {
+                    if let Some(name_str) = name.as_str() {
+                        name_str.to_string()
+                    } else {
+                        warn!(
+                            "Unable to parse event bus name (despite existing) for: {}. Defaulting to resource name",
+                            resource_name
+                        );
+                        resource_name.to_string()
+                    }
+                } else {
+                    warn!(
+                        "Unable to parse event bus name for: {}. Defaulting to resource name",
+                        resource_name
+                    );
+                    resource_name.to_string()
+                };
+
+                let event_bus_infra = EventBusBuilder::new()
+                    .name(event_bus_name)
+                    .template_name(resource.get_template_name().to_string())
+                    .build()?;
+                infrastructure.push(Infrastructure::EventBus(ResourceContainer::new(
+                    event_bus_infra,
+                )));
+            }
+            ResourceType::EventRule => {
+                debug!("Found an event rule!");
+                let Ok(event_rule) = serde_yaml::from_value::<EventRule>(
+                    resource.get_resources().properties.clone(),
+                ) else {
+                    warn!(
+                        "Unable to parse event rule properties for: {}. Skipping",
+                        resource_name
+                    );
+                    continue;
+                };
+
+                debug!("Properties: {:?}", event_rule);
+
+                let targets: Vec<String> = event_rule
+                    .clone()
+                    .targets
+                    .iter()
+                    .map(|t| {
+                        let arn = t.arn.as_str();
+                        if let Some(arn) = arn {
+                            arn.to_string()
+                        } else {
+                            warn!("Unable to parse target ARN for event rule");
+                            "".to_string()
+                        }
+                    })
+                    .collect();
+
+                let event_pattern =
+                    EventPatternBuilder::from_cloud_formation(event_rule.event_pattern).build()?;
+
+                let event_rule_infra = EventRuleBuilder::new()
+                    .name(resource_name.to_string())
+                    .template_name(resource.get_template_name().to_string())
+                    .triggers(Triggers::new(None, Some(targets)))
+                    .event_pattern(event_pattern)
+                    .build()?;
+                infrastructure.push(Infrastructure::EventRule(ResourceContainer::new(
+                    event_rule_infra,
+                )));
             }
             _ => {
                 trace!("Resource not recognized as infrastructure");
@@ -144,18 +238,17 @@ fn create_infrastructure_from_s3_resource(
         resource_name.to_lowercase() // makes lowercase because s3 buckets are lowercase
     };
 
-    let mut new_infrastructure = Infrastructure::new(
-        bucket_name.to_string(),
-        InfrastructureType::S3,
-        template_name,
-    );
+    let s3_infra_builder = S3Builder::new()
+        .name(bucket_name.to_string())
+        .template_name(template_name.to_string());
 
+    let mut queue_triggers = vec![];
     if let Some(notification_configuration) = resource.get_notification_configuration() {
         if let Some(queue_config) = notification_configuration.get_queue_configurations() {
             for queue in queue_config {
                 let queue_val = queue.get_queue().as_str();
                 if let Some(queue_name) = queue_val {
-                    new_infrastructure.add_queue_to_triggers(queue_name.to_string());
+                    queue_triggers.push(queue_name.to_string());
                 } else {
                     warn!(
                         "Unable to parse queue name for S3 bucket: {}. Skipping",
@@ -171,7 +264,11 @@ fn create_infrastructure_from_s3_resource(
         );
     }
 
-    Ok(new_infrastructure)
+    let s3_infra = s3_infra_builder
+        .triggers(Triggers::new(None, Some(queue_triggers)))
+        .build()?;
+
+    Ok(Infrastructure::S3(ResourceContainer::new(s3_infra)))
 }
 
 /// Creates the infrastructure files required for the local environment. This includes the
@@ -217,7 +314,16 @@ pub fn create_infrastructure_files(config: &Config) -> anyhow::Result<()> {
         return Err(Error::msg("Failed to find docker-compose template"));
     };
 
-    if let true = has_infrastructure_type(infrastructure, InfrastructureType::S3) {
+    let mut has_s3 = false;
+    let mut has_queue = false;
+
+    infrastructure.iter().for_each(|i| match i {
+        Infrastructure::S3(_) => has_s3 = true,
+        Infrastructure::Sqs(_) => has_queue = true,
+        _ => (),
+    });
+
+    if has_s3 {
         info!("Detected S3 infrastructure. Creating required files within .sam-e directory");
         fs::create_dir_all(format!("{}/local-s3", SAM_E_DIRECTORY))?;
         create_s3_dockerfile(&tera, &context)?;
@@ -225,7 +331,7 @@ pub fn create_infrastructure_files(config: &Config) -> anyhow::Result<()> {
         debug!("No S3 infrastructure detected. Skipping creation of S3 Dockerfile");
     }
 
-    if let true = has_infrastructure_type(infrastructure, InfrastructureType::Sqs) {
+    if has_queue {
         info!("Detected SQS infrastructure. Creating required files within .sam-e directory");
         fs::create_dir_all(format!("{}/local-queue", SAM_E_DIRECTORY))?;
         create_queue_config(&tera, &context)?;
@@ -235,17 +341,6 @@ pub fn create_infrastructure_files(config: &Config) -> anyhow::Result<()> {
 
     create_docker_compose(&tera, &context)?;
     Ok(())
-}
-
-/// Checks if the infrastructure given matches the type being checked. Returns Boolean based on
-/// this match
-fn has_infrastructure_type(
-    infrastructure: &Vec<Infrastructure>,
-    infrastructure_type: InfrastructureType,
-) -> bool {
-    infrastructure
-        .iter()
-        .any(|i| i.get_infrastructure_type() == &infrastructure_type)
 }
 
 /// Actually writes the docker-compose file to the .sam-e directory after rendering via tera

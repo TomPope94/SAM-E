@@ -1,6 +1,6 @@
-use tracing::{debug, error, info};
 use crate::scripts::utils::{check_init, get_config, get_sam_e_directory_path};
 use std::fs;
+use tracing::{debug, error, info};
 
 pub async fn create() -> anyhow::Result<()> {
     debug!("Creating function group");
@@ -33,7 +33,6 @@ pub async fn create() -> anyhow::Result<()> {
 
     fs::write(&sam_e_config_path, config_string)?;
     debug!("SAM-E config file updated successfully");
-
 
     info!("Run `sam-e function group add` to add lambdas to the group");
 

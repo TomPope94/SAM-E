@@ -1,6 +1,6 @@
 use sam_e_types::config::{lambda::Lambda, Config};
 
-use aws_sdk_sqs::{Client as QueueClient, config::Region};
+use aws_sdk_sqs::{config::Region, Client as QueueClient};
 
 use reqwest::Client as RequestClient;
 use tracing::debug;

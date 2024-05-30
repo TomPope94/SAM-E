@@ -1,0 +1,23 @@
+[workspace]
+[package]
+name = "test-sqs-handler"
+version = "0.1.0"
+edition = "2021"
+
+[dependencies]
+anyhow = "1.0"
+aws-config = { version = "1.1.5", features = ["behavior-version-latest"] }
+aws_lambda_events = "0.13.0"
+aws-sdk-sqs = "1.20.0"
+lambda_http = "0.9.1"
+lambda_runtime = "0.9.1"
+serde = "1.0"
+serde_json = "1.0"
+tokio = { version = "1.0", features = ["macros"] }
+tracing = { version = "0.1", features = ["log"] }
+tracing-subscriber = { version = "0.3", default-features = false, features = ["fmt", "env-filter"] }
+
+[[bin]]
+name = "app"
+path = "src/main.rs"
+

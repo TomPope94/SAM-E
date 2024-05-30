@@ -2,7 +2,8 @@ pub mod apigw;
 pub mod base_path_mapping;
 pub mod bucket;
 pub mod db_instance;
-pub mod event;
+pub mod event_bus;
+pub mod event_rule;
 pub mod function;
 pub mod queue;
 
@@ -10,7 +11,8 @@ pub use apigw::ApiGateway;
 pub use base_path_mapping::BasePathMapping;
 pub use bucket::Bucket;
 pub use db_instance::DbInstance;
-pub use event::Event;
+pub use event_bus::EventBus;
+pub use event_rule::EventRule;
 pub use function::Function;
 pub use queue::Queue;
 
@@ -30,6 +32,10 @@ pub enum ResourceType {
     Queue,
     #[serde(rename = "AWS::S3::Bucket")]
     Bucket,
+    #[serde(rename = "AWS::Events::EventBus")]
+    EventBus,
+    #[serde(rename = "AWS::Events::Rule")]
+    EventRule,
     #[serde(untagged)]
     Other(serde_yaml::Value),
 }

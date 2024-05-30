@@ -16,7 +16,7 @@ volumes:
 {%- elif infra.infrastructure_type == "Postgres" and not postgres_volume -%}
   {%- set_global postgres_volume = true %}
   postgres-local: {}
-{%- elif infra.infrastructure_type == "Sqs" and not sqs_volume -%}
+{%- elif infra.infrastructure_type == "SQS" and not sqs_volume -%}
   {%- set_global sqs_volume = true %}
   sqs-local: {}
 {%- elif infra.infrastructure_type == "S3" and not s3_volume -%}
@@ -31,7 +31,7 @@ services:
     init: true
     image: tompope94/sam-e-invoker
     environment:
-      - RUST_LOG=sam_e_invoker=debug,sam_e_source_apigw=debug,sam_e_source_sqs=debug,sam_e_source_s3=debug
+      - RUST_LOG=sam_e_invoker=debug,sam_e_source_apigw=debug,sam_e_source_sqs=debug,sam_e_source_s3=debug,sam_e_source_eventbridge=debug
       - CONFIG=$CONFIG
     {%- if sqs_volume %}
     depends_on:
@@ -135,7 +135,7 @@ services:
       - development
     volumes:
       - postgres-local:/var/lib/postgresql/data
-{%- elif infra.infrastructure_type == "Sqs" and not sqs_container -%}
+{%- elif infra.infrastructure_type == "SQS" and not sqs_container -%}
   {%- set_global sqs_container = true %}
   sqs-local:
     init: true

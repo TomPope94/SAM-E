@@ -1,5 +1,5 @@
-pub mod create;
 pub mod add;
+pub mod create;
 
 use crate::data::cli::FunctionGroupCommand;
 

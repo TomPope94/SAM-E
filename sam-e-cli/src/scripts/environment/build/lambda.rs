@@ -3,7 +3,7 @@ use anyhow::Result;
 use sam_e_types::{
     cloudformation::resource::{
         self,
-        event::{ApiEvent, Event as LambdaEvent, EventType, SqsEvent},
+        function::event::{ApiEvent, Event as LambdaEvent, EventType, SqsEvent},
         Function, ResourceType,
     },
     config::lambda::{docker::DockerBuildBuilder, event::Event, Lambda, PackageType},

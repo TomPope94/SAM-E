@@ -4,10 +4,7 @@ mod request;
 mod response;
 pub mod utils;
 
-use axum::{
-    routing::get,
-    Router,
-};
+use axum::{routing::get, Router};
 
 use tracing::{debug, info};
 use tracing_subscriber::EnvFilter;
@@ -39,22 +36,23 @@ async fn main() -> anyhow::Result<()> {
     debug!("Creating the API state");
     let api_state = data::ApiState::from_config(&config);
 
-
     debug!("Setting up the API routes");
     let app = Router::new()
-        .route("/", 
-               get(request::handler)
-               .post(request::handler)
-               .patch(request::handler)
-               .put(request::handler)
-               .delete(request::handler)
+        .route(
+            "/",
+            get(request::handler)
+                .post(request::handler)
+                .patch(request::handler)
+                .put(request::handler)
+                .delete(request::handler),
         )
-        .route("/*path", 
-               get(request::handler)
-               .post(request::handler)
-               .patch(request::handler)
-               .put(request::handler)
-               .delete(request::handler)
+        .route(
+            "/*path",
+            get(request::handler)
+                .post(request::handler)
+                .patch(request::handler)
+                .put(request::handler)
+                .delete(request::handler),
         )
         .layer(middleware::cors_layer())
         .with_state(api_state);
@@ -65,5 +63,3 @@ async fn main() -> anyhow::Result<()> {
 
     Ok(())
 }
-
-

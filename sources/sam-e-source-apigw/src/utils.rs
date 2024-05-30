@@ -1,20 +1,27 @@
-use sam_e_types::config::lambda::{event::Event, event::EventProperties, Lambda};
 use anyhow::{anyhow, Result};
+use aws_lambda_events::apigw::{
+    ApiGatewayProxyRequest, ApiGatewayProxyRequestContext, ApiGatewayRequestIdentity,
+};
 use axum::{
     extract::Json,
     http::{HeaderMap, HeaderName, HeaderValue, Method},
 };
-use aws_lambda_events::apigw::{
-    ApiGatewayProxyRequest, ApiGatewayProxyRequestContext, ApiGatewayRequestIdentity,
-};
+use sam_e_types::config::lambda::{event::Event, event::EventProperties, Lambda};
 use std::collections::HashMap;
 use tracing::{debug, trace, warn};
 use uuid::Uuid;
 
 /// Finds the relevant Lambda that matches the base path and method been used in the invocation.
 /// This will then be passed to the invoker ready to be processed by the Lambda Runtime API.
-pub fn find_lambda_with_base_path(lambdas: Vec<&Lambda>, base_path: &str, method: &str) -> Result<(Lambda, Event)> {
-    debug!("Checking lambdas for match to api request: {} {}", base_path, method);
+pub fn find_lambda_with_base_path(
+    lambdas: Vec<&Lambda>,
+    base_path: &str,
+    method: &str,
+) -> Result<(Lambda, Event)> {
+    debug!(
+        "Checking lambdas for match to api request: {} {}",
+        base_path, method
+    );
     for lambda in lambdas {
         for event in lambda.get_events() {
             let Some(event_props) = event.get_properties() else {
@@ -24,13 +31,12 @@ pub fn find_lambda_with_base_path(lambdas: Vec<&Lambda>, base_path: &str, method
 
             match event_props {
                 EventProperties::Api(api_props) => {
-                    let route_filter = if let Ok(route_match) =
-                        api_props.get_route_regex().is_match(&base_path)
-                    {
-                        route_match
-                    } else {
-                        false
-                    };
+                    let route_filter =
+                        if let Ok(route_match) = api_props.get_route_regex().is_match(&base_path) {
+                            route_match
+                        } else {
+                            false
+                        };
 
                     let method_filter = ["ANY", &method.to_uppercase()]
                         .contains(&api_props.get_method().to_uppercase().as_str());

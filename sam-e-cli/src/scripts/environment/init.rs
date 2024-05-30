@@ -1,6 +1,6 @@
 use sam_e_types::config::{runtime::RuntimeBuilder, Config};
 
-use std::{env, fs, collections::HashMap};
+use std::{collections::HashMap, env, fs};
 use tracing::{debug, info, warn};
 
 use crate::scripts::{

@@ -1,0 +1,22 @@
+version: '3.9'
+
+services:
+  # Custom local invoker. Will run the local store for lambda invocation and handle via Lambda Runtime API
+  sam-e-invoker:
+    init: true
+    image: sam-e-invoker
+    build: 
+      context: .
+      dockerfile: dockerfile
+    ports:
+      - 3030:3030
+      - 3000:3000
+      - 3001:3001
+      - 3002:3002
+    mem_limit: 250m
+    environment:
+      - RUST_LOG=sam_e_invoker=debug,sam_e_source_apigw=debug,sam_e_source_sqs=debug,sam_e_source_s3=debug,sam_e_source_eventbridge=debug
+      - CONFIG=$CONFIG
+    volumes:
+      - /home/ubuntu/.aws/credentials:/root/.aws/credentials:ro
+
