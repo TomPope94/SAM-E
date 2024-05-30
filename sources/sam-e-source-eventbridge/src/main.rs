@@ -29,6 +29,16 @@ async fn main() -> anyhow::Result<()> {
     let event_store = data::store::EventStore::from_config(&config);
     debug!("Event store setup successfully");
 
+    let event_store_for_listening = event_store.clone();
+    tokio::spawn(async move {
+        debug!("Listening for events");
+        let event_bus_names = event_store_for_listening.get_event_bus_names();
+
+        for event_bus_name in event_bus_names {
+            event_store_for_listening.listen_for_events(event_bus_name);
+        }
+    });
+
     debug!("Setting up the eventbridge API routes");
     let app = Router::new()
         .route("/", post(request::handler))

@@ -1,22 +1,24 @@
-use crate::data::PutEventsRequest;
+use crate::data::PutEventsRequestEntry;
 use sam_e_types::config::{Config, Infrastructure};
 
 use anyhow::{anyhow, Result};
+use parking_lot::RwLock;
 use serde::{Deserialize, Serialize};
-use std::collections::HashMap;
+use std::{collections::HashMap, sync::Arc};
 use tracing::debug;
+use tokio::time::{sleep, Duration};
 use uuid::Uuid;
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct EventRequestItem {
     pub id: Uuid,
     #[serde(flatten)]
-    pub event: PutEventsRequest,
+    pub event: PutEventsRequestEntry,
 }
 
 pub struct EventRequestItemBuilder {
     id: Uuid,
-    event: Option<PutEventsRequest>,
+    event: Option<PutEventsRequestEntry>,
 }
 
 impl EventRequestItemBuilder {
@@ -32,7 +34,7 @@ impl EventRequestItemBuilder {
         self
     }
 
-    pub fn with_event(mut self, event: PutEventsRequest) -> Self {
+    pub fn with_event(mut self, event: PutEventsRequestEntry) -> Self {
         self.event = Some(event);
         self
     }
@@ -44,15 +46,15 @@ impl EventRequestItemBuilder {
     }
 }
 
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone)]
 pub struct EventStore {
-    pub event_buses: HashMap<String, Vec<EventRequestItem>>,
+    pub event_buses: Arc<RwLock<HashMap<String, Vec<EventRequestItem>>>>,
 }
 
 impl EventStore {
     pub fn new() -> Self {
         Self {
-            event_buses: HashMap::new(),
+            event_buses: Arc::new(RwLock::new(HashMap::new())),
         }
     }
 
@@ -79,18 +81,59 @@ impl EventStore {
 
         debug!("Event store built successfully!");
 
-        Self { event_buses }
+        Self { event_buses: Arc::new(RwLock::new(event_buses)) }
     }
 
     pub fn add_event(&mut self, event_bus_name: &str, event: EventRequestItem) {
-        let events = self
-            .event_buses
-            .entry(event_bus_name.to_string())
-            .or_insert_with(Vec::new);
+        debug!("Event request received. Adding to event store...");
+        debug!("Current event store: {:#?}", self);
+
+        let mut event_buses = self.event_buses.write();
+        let events = event_buses.entry(event_bus_name.to_string()).or_insert_with(Vec::new);
         events.push(event);
+
+        debug!("Event added to event store");
+        debug!("New event store: {:#?}", self);
     }
 
-    pub fn get_events(&self, event_bus_name: &str) -> Option<&Vec<EventRequestItem>> {
-        self.event_buses.get(event_bus_name)
+    pub fn listen_for_events(&self, event_bus_name: String) {
+        debug!("Listening for events for event_bus: {}", event_bus_name);
+        let read_store = self.clone();
+
+        tokio::spawn(async move {
+            loop {
+                debug!("Starting listening loop...");
+                let mut processed_events: Vec<Uuid> = Vec::new();
+                loop {
+                    sleep(Duration::from_millis(500)).await;
+
+                    let blank_events: Vec<EventRequestItem> = Vec::new();
+                    let event_buses = read_store.event_buses.read();
+                    let events = event_buses.get(&event_bus_name).unwrap_or(&blank_events);
+
+                    if events.len() > 0 {
+                        for event in events {
+                            debug!("Event received: {:#?}", event);
+                            debug!("Processing event...");
+                            processed_events.push(event.id);
+                        }
+
+                        debug!("Dropping out of read loop...");
+                        break;
+                    }
+                }
+
+                debug!("Removing processed events from event store...");
+                let mut event_buses = read_store.event_buses.write();
+                let events = event_buses.get_mut(&event_bus_name).unwrap();
+                events.retain(|event| !processed_events.contains(&event.id));
+
+                debug!("Events removed from event store");
+            }
+        });
+    }
+
+    pub fn get_event_bus_names(&self) -> Vec<String> {
+        self.event_buses.read().keys().cloned().collect()
     }
 }

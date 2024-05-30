@@ -38,8 +38,7 @@ Resources:
         MySQSEvent:
           Type: SQS
           Properties:
-            Queue: 
-              Fn::GetAtt: TestDeliverySQS.Arn
+            Queue: !GetAtt TestDeliverySQS.Arn
             BatchSize: 10
 
 
@@ -63,13 +62,13 @@ Resources:
       Stage: 
         Ref: TestApiGateway.Stage
 
-  TestSqsTrigger:
+  TestEventbridgeTrigger:
     Type: AWS::Serverless::Function
     Properties:
       PackageType: Image
       Architectures:
         - arm64      
-      ImageUri: test-sqs-trigger
+      ImageUri: test-eventbridge-trigger
       Events:
         Index:
           Type: Api

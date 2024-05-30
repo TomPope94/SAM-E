@@ -2,9 +2,10 @@ use sam_e_types::{
     cloudformation::resource::{Bucket, DbInstance, EventBus, EventRule, ResourceType},
     config::{
         infrastructure::{
-            event_bus::EventBusBuilder, mysql::MysqlBuilder, postgres::PostgresBuilder,
-            s3::S3Builder, sqs::QueueBuilder, triggers::Triggers, Infrastructure,
-            ResourceContainer,
+            event_rule::{EventPatternBuilder, EventRuleBuilder},
+            triggers::Triggers,
+            EventBusBuilder, Infrastructure, MysqlBuilder, PostgresBuilder, QueueBuilder,
+            ResourceContainer, S3Builder,
         },
         Config,
     },
@@ -141,6 +142,45 @@ pub fn get_infrastructure_from_resources(
             }
             ResourceType::EventRule => {
                 debug!("Found an event rule!");
+                let Ok(event_rule) = serde_yaml::from_value::<EventRule>(
+                    resource.get_resources().properties.clone(),
+                ) else {
+                    warn!(
+                        "Unable to parse event rule properties for: {}. Skipping",
+                        resource_name
+                    );
+                    continue;
+                };
+
+                debug!("Properties: {:?}", event_rule);
+
+                let targets: Vec<String> = event_rule
+                    .clone()
+                    .targets
+                    .iter()
+                    .map(|t| {
+                        let arn = t.arn.as_str();
+                        if let Some(arn) = arn {
+                            arn.to_string()
+                        } else {
+                            warn!("Unable to parse target ARN for event rule");
+                            "".to_string()
+                        }
+                    })
+                    .collect();
+
+                let event_pattern =
+                    EventPatternBuilder::from_cloud_formation(event_rule.event_pattern).build()?;
+
+                let event_rule_infra = EventRuleBuilder::new()
+                    .name(resource_name.to_string())
+                    .template_name(resource.get_template_name().to_string())
+                    .triggers(Triggers::new(None, Some(targets)))
+                    .event_pattern(event_pattern)
+                    .build()?;
+                infrastructure.push(Infrastructure::EventRule(ResourceContainer::new(
+                    event_rule_infra,
+                )));
             }
             _ => {
                 trace!("Resource not recognized as infrastructure");
