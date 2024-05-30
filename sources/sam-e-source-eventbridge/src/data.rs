@@ -18,10 +18,10 @@ pub struct PutEventsRequest {
 #[serde(rename_all = "PascalCase")]
 pub struct PutEventsRequestEntry {
     pub time: Option<String>, // TODO: Change to DateTime
-    pub source: Option<String>,
+    pub source: String,
     pub resources: Option<Vec<String>>,
-    pub detail_type: Option<String>,
-    pub detail: Option<String>,
+    pub detail_type: String,
+    pub detail: String,
     pub event_bus_name: Option<String>,
     pub trace_header: Option<String>,
 }

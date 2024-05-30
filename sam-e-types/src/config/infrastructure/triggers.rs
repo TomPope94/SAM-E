@@ -1,4 +1,10 @@
+use anyhow::{anyhow, Result};
 use serde::{Deserialize, Serialize};
+use tracing::{debug, error};
+
+use aws_sdk_sqs::{config::Region, Client};
+
+use std::sync::Arc;
 
 #[derive(Debug, Deserialize, Serialize, Clone, PartialEq, Eq)]
 pub struct Triggers {
@@ -43,5 +49,53 @@ impl Triggers {
 
     pub fn set_queues(&mut self, queues: Vec<String>) {
         self.queues = Some(queues);
+    }
+
+    pub async fn send(&self, event: String) -> Result<()> {
+        if let Some(lambdas) = &self.lambdas {
+            for lambda in lambdas {
+                debug!("Sending event {} to lambda {}", event, lambda);
+            }
+        }
+
+        if let Some(queues) = &self.queues {
+            debug!("Creating AWS SQS client");
+            let region = Region::new("eu-west-1");
+
+            // let config = aws_config::defaults(BehaviorVersion::v2023_11_09())
+            let config = aws_config::from_env()
+                .region(region)
+                .endpoint_url("http://sqs-local:9324")
+                .load()
+                .await;
+
+            let client = Client::new(&config);
+
+            for queue in queues {
+                debug!("Sending event {} to queue {}", event, queue);
+                let queue_url = client.get_queue_url().queue_name(queue).send().await;
+
+                let Ok(queue_url_output) = queue_url else {
+                    error!("Error getting queue URL for queue: {}", queue);
+                    return Err(anyhow!("Error getting queue URL for queue: {}", queue));
+                };
+
+                let Some(queue_url) = queue_url_output.queue_url else {
+                    error!("Queue URL not set for queue: {}", queue);
+                    return Err(anyhow!("Queue URL not set for queue: {}", queue));
+                };
+
+                client
+                    .send_message()
+                    .queue_url(queue_url)
+                    .message_body(&event)
+                    .send()
+                    .await?;
+
+                debug!("Event sent to queue successfully");
+            }
+        }
+
+        Ok(())
     }
 }

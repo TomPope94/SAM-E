@@ -8,7 +8,9 @@ use serde::{Deserialize, Serialize};
 pub struct QueueInfrastructure {
     pub name: String,
     pub template_name: String,
+    #[serde(skip_serializing_if = "Option::is_none")]
     pub queue_url: Option<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
     pub triggers: Option<Triggers>,
 }
 

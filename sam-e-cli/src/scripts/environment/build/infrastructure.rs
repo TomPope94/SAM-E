@@ -132,8 +132,26 @@ pub fn get_infrastructure_from_resources(
 
                 debug!("Properties: {:?}", event_bus);
 
+                let event_bus_name = if let Some(name) = event_bus.name {
+                    if let Some(name_str) = name.as_str() {
+                        name_str.to_string()
+                    } else {
+                        warn!(
+                            "Unable to parse event bus name (despite existing) for: {}. Defaulting to resource name",
+                            resource_name
+                        );
+                        resource_name.to_string()
+                    }
+                } else {
+                    warn!(
+                        "Unable to parse event bus name for: {}. Defaulting to resource name",
+                        resource_name
+                    );
+                    resource_name.to_string()
+                };
+
                 let event_bus_infra = EventBusBuilder::new()
-                    .name(resource_name.to_string())
+                    .name(event_bus_name)
                     .template_name(resource.get_template_name().to_string())
                     .build()?;
                 infrastructure.push(Infrastructure::EventBus(ResourceContainer::new(

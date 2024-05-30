@@ -10,6 +10,8 @@ use tracing_subscriber::EnvFilter;
 
 use sam_e_types::config::Config;
 
+use aws_sdk_sqs::{config::Region, Client};
+
 #[tokio::main]
 async fn main() -> anyhow::Result<()> {
     tracing_subscriber::fmt()
@@ -29,13 +31,26 @@ async fn main() -> anyhow::Result<()> {
     let event_store = data::store::EventStore::from_config(&config);
     debug!("Event store setup successfully");
 
+    debug!("Creating AWS SQS client");
+    let region = Region::new("eu-west-1");
+
+    // let config = aws_config::defaults(BehaviorVersion::v2023_11_09())
+    let config = aws_config::from_env()
+        .region(region)
+        .endpoint_url("http://sqs-local:9324")
+        .load()
+        .await;
+
+
     let event_store_for_listening = event_store.clone();
     tokio::spawn(async move {
         debug!("Listening for events");
         let event_bus_names = event_store_for_listening.get_event_bus_names();
 
+        let client = Client::new(&config);
+
         for event_bus_name in event_bus_names {
-            event_store_for_listening.listen_for_events(event_bus_name);
+            event_store_for_listening.listen_for_events(event_bus_name, client.clone()).await;
         }
     });
 

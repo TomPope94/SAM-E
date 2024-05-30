@@ -31,7 +31,7 @@ async fn post_foo() -> Json<Value> {
     let event_entry = PutEventsRequestEntryBuilder::default()
         .detail("{}")
         .detail_type("test.event")
-        .source("service.tester")
+        .source("service.my_micro_service")
         .event_bus_name("TestEventBus")
         .build();
     debug!("Event entry created successfully");

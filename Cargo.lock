@@ -1799,7 +1799,9 @@ name = "sam-e-source-eventbridge"
 version = "0.1.0"
 dependencies = [
  "anyhow",
+ "aws-config",
  "aws-sdk-eventbridge",
+ "aws-sdk-sqs",
  "aws_lambda_events",
  "axum",
  "chrono",
@@ -1864,6 +1866,8 @@ name = "sam-e-types"
 version = "0.7.0"
 dependencies = [
  "anyhow",
+ "aws-config",
+ "aws-sdk-sqs",
  "aws_lambda_events",
  "chrono",
  "fancy-regex",

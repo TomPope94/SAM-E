@@ -11,6 +11,7 @@ use tracing::debug;
 pub struct EventRuleInfrastructure {
     pub name: String,
     pub template_name: String,
+    #[serde(skip_serializing_if = "Option::is_none")]
     pub triggers: Option<Triggers>,
     pub event_pattern: EventPattern,
 }
@@ -74,8 +75,11 @@ impl EventRuleBuilder {
 #[derive(Serialize, Deserialize, Debug, Clone, PartialEq, Eq)]
 #[serde(rename_all = "PascalCase")]
 pub struct EventPattern {
+    #[serde(skip_serializing_if = "Option::is_none")]
     pub detail: Option<Value>,
+    #[serde(skip_serializing_if = "Option::is_none")]
     pub detail_type: Option<Vec<String>>,
+    #[serde(skip_serializing_if = "Option::is_none")]
     pub source: Option<Vec<String>>,
 }
 
