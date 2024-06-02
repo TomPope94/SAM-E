@@ -43,6 +43,7 @@ services:
       - 3030:3030
       - 3000:3000
       - 3001:3001
+      - 3002:3002
     mem_limit: 250m
     volumes:
       - {{runtime.credentials_location}}:/root/.aws/credentials:ro
@@ -73,7 +74,7 @@ services:
       - AWS_LAMBDA_LOG_GROUP_NAME=aws/lambda/{{lambda.name}}
       {% for key, value in lambda.environment_vars -%}
       - {{key}}={{value}}
-      {%- endfor %}
+      {% endfor -%}
     volumes:
       - {{runtime.credentials_location}}:/root/.aws/credentials:ro
 {% endfor %}

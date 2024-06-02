@@ -179,17 +179,7 @@ impl EventStore {
                                     debug!("Event matched rule: {:#?}", rule);
                                     debug!("Sending event to trigger...");
 
-                                    // let Some(event_queue_triggers) = &rule.triggers.get_queues() else {
-                                    //     warn!("No queue triggers found for event rule: {:#?}", rule);
-                                    //     warn!("Only queue triggers are supported at this time");
-                                    //     continue;
-                                    // };
-                                    // for queue_trigger in event_queue_triggers {
-                                    //     debug!("Sending event to queue: {}", queue_trigger);
-                                    //     let queue_url = &client.get_queue_url().queue_name(queue_trigger).send().await;
-                                    //     debug!("Queue URL: {:#?}", queue_url);
-                                    // }
-                                    let event_string = serde_yaml::to_string(&event).unwrap();
+                                    let event_string = serde_json::to_string(&event).unwrap();
 
                                     let send_res = rule.triggers.send(event_string).await;
                                     if let Err(e) = send_res {
