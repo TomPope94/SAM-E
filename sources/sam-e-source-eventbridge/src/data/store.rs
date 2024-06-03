@@ -9,8 +9,6 @@ use tracing::{debug, warn};
 use tokio::time::{sleep, Duration};
 use uuid::Uuid;
 
-use aws_sdk_sqs::{config::Region, Client};
-
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct EventRequestItem {
     pub id: Uuid,
@@ -123,12 +121,11 @@ impl EventStore {
         debug!("New event store: {:#?}", self);
     }
 
-    pub async fn listen_for_events(&self, event_bus_name: String, client: Client) {
+    pub async fn listen_for_events(&self, event_bus_name: String) {
         debug!("Listening for events for event_bus: {}", event_bus_name);
         let read_store = self.clone();
 
         tokio::spawn(async move {
-            let client = client.clone();
             loop {
                 debug!("Starting listening loop...");
                 let mut processed_events: Vec<Uuid> = Vec::new();
@@ -179,7 +176,23 @@ impl EventStore {
                                     debug!("Event matched rule: {:#?}", rule);
                                     debug!("Sending event to trigger...");
 
-                                    let event_string = serde_json::to_string(&event).unwrap();
+                                    // let event_string = serde_json::to_string(&event).unwrap();
+                                    let event_detail_as_value: serde_json::Value = serde_json::from_str(&event.event.detail).unwrap();
+
+                                    let datetime = chrono::Utc::now();
+                                    let lambda_event = aws_lambda_events::event::eventbridge::EventBridgeEvent {
+                                        version: Some("0".to_string()),
+                                        id: Some(event.id.to_string()),
+                                        detail_type: event.event.detail_type.clone(),
+                                        source: event.event.source.clone(),
+                                        account: Some("123456789012".to_string()),
+                                        time: Some(datetime),
+                                        region: Some("eu-west-1".to_string()),
+                                        resources: Some(vec!["resource1".to_string(), "resource2".to_string()]),
+                                        detail: event_detail_as_value,
+                                    };
+
+                                    let event_string = serde_json::to_string(&lambda_event).unwrap();
 
                                     let send_res = rule.triggers.send(event_string).await;
                                     if let Err(e) = send_res {

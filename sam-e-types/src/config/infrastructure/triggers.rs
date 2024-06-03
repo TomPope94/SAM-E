@@ -4,8 +4,6 @@ use tracing::{debug, error};
 
 use aws_sdk_sqs::{config::Region, Client};
 
-use std::sync::Arc;
-
 #[derive(Debug, Deserialize, Serialize, Clone, PartialEq, Eq)]
 pub struct Triggers {
     #[serde(skip_serializing_if = "Option::is_none")]

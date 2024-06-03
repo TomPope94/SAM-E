@@ -1765,6 +1765,7 @@ dependencies = [
  "axum",
  "lambda_http",
  "lambda_runtime",
+ "serde",
  "serde_json",
  "tokio",
  "tracing",

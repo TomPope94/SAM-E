@@ -8,10 +8,17 @@ use lambda_http::{
     Error,
 };
 use serde_json::{json, Value};
+use serde::{Deserialize, Serialize};
 use tracing::{debug, info};
 use tracing_subscriber::EnvFilter;
 
 use aws_sdk_eventbridge::{config::Region, Client, types::builders::PutEventsRequestEntryBuilder};
+
+#[derive(Debug, Serialize, Deserialize)]
+struct EventBridgeTest {
+    name: String,
+    test_value: serde_json::Value,
+}
 
 async fn post_foo() -> Json<Value> {
     debug!("Creating AWS Eventbridge client");
@@ -27,14 +34,27 @@ async fn post_foo() -> Json<Value> {
 
     debug!("Client created successfully");
 
+    let test_event = EventBridgeTest {
+        name: "test".to_string(),
+        test_value: serde_json::json!({"test": "value"}),
+    };
+
+    let test_event_value = serde_json::to_value(&test_event).unwrap();
+    let test_event_str = serde_json::to_string(&test_event_value).unwrap();
+    debug!("test_event_str: {}", test_event_str);
+
+    let test_event_str_from_struct = serde_json::to_string(&test_event).unwrap();
+    debug!("test_event_str_from_struct: {}", test_event_str_from_struct);
+
     debug!("Creating event entry...");
     let event_entry = PutEventsRequestEntryBuilder::default()
-        .detail("{}")
+        .detail(test_event_str)
         .detail_type("test.event")
         .source("service.my_micro_service")
         .event_bus_name("TestEventBus")
         .build();
     debug!("Event entry created successfully");
+    debug!("Event entry: {:#?}", event_entry);
 
     debug!("Sending event...");
     let res = client.put_events()

@@ -398,26 +398,6 @@ dependencies = [
 
 [[package]]
 name = "aws_lambda_events"
-version = "0.13.1"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "d5af275f3e5801892c4295a919c5edbe8d24134f91458269a77a2da12622c123"
-dependencies = [
- "base64 0.21.7",
- "bytes",
- "chrono",
- "flate2",
- "http 1.1.0",
- "http-body 1.0.0",
- "http-serde",
- "query_map",
- "serde",
- "serde_dynamo",
- "serde_json",
- "serde_with",
-]
-
-[[package]]
-name = "aws_lambda_events"
 version = "0.14.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "4e84ed7ec0561e54444ad328c76b633f2946b77c234c99baf18c9e84250ceea1"
@@ -430,6 +410,26 @@ dependencies = [
  "query_map",
  "serde",
  "serde_json",
+]
+
+[[package]]
+name = "aws_lambda_events"
+version = "0.15.1"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "7319a086b79c3ff026a33a61e80f04fd3885fbb73237981ea080d21944e1cb1c"
+dependencies = [
+ "base64 0.22.1",
+ "bytes",
+ "chrono",
+ "flate2",
+ "http 1.1.0",
+ "http-body 1.0.0",
+ "http-serde",
+ "query_map",
+ "serde",
+ "serde_dynamo",
+ "serde_json",
+ "serde_with",
 ]
 
 [[package]]
@@ -529,8 +529,10 @@ checksum = "a21f936df1771bf62b77f047b726c4625ff2e8aa607c01ec06e5a05bd8463401"
 dependencies = [
  "android-tzdata",
  "iana-time-zone",
+ "js-sys",
  "num-traits",
  "serde",
+ "wasm-bindgen",
  "windows-targets 0.52.5",
 ]
 
@@ -1712,7 +1714,7 @@ dependencies = [
  "anyhow",
  "aws-config",
  "aws-sdk-sqs",
- "aws_lambda_events 0.13.1",
+ "aws_lambda_events 0.15.1",
  "lambda_http",
  "lambda_runtime",
  "serde",

@@ -11,7 +11,7 @@ pub async fn dequeue_mesesage(queue_name: &str, receipt_handle: &Option<String>)
     };
 
     debug!("Creating AWS SQS client");
-    let region = Region::new("eu-west-1");
+    let region = Region::new("eu-west-2");
 
     // let config = aws_config::defaults(BehaviorVersion::v2023_11_09())
     let config = aws_config::from_env()

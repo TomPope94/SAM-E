@@ -8,14 +8,14 @@ pub enum EventBridgeRequest {
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
-#[serde(rename_all = "PascalCase")]
+#[serde(rename_all(deserialize = "PascalCase", serialize = "kebab-case"))]
 pub struct PutEventsRequest {
     pub entries: Vec<PutEventsRequestEntry>,
 }
 
 // This should come from the aws-sdk-eventbridge crate but it doesn't implement the Deserialize/Serialize traits
 #[derive(Debug, Clone, Serialize, Deserialize)]
-#[serde(rename_all = "PascalCase")]
+#[serde(rename_all(deserialize = "PascalCase", serialize = "kebab-case"))]
 pub struct PutEventsRequestEntry {
     pub time: Option<String>, // TODO: Change to DateTime
     pub source: String,
@@ -27,7 +27,7 @@ pub struct PutEventsRequestEntry {
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
-#[serde(rename_all = "PascalCase")]
+#[serde(rename_all(deserialize = "PascalCase", serialize = "kebab-case"))]
 pub struct PutEventsResultEntry {
     pub event_id: uuid::Uuid,
     pub error_code: Option<String>,

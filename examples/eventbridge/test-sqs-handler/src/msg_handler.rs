@@ -1,10 +1,20 @@
 mod handlers;
 
-use aws_lambda_events::event::sqs::SqsEventObj;
+use aws_lambda_events::event::{
+    sqs::SqsEventObj,
+    eventbridge::EventBridgeEvent,
+};
 use lambda_runtime::{LambdaEvent, Error};
+use serde::{Deserialize, Serialize, de::DeserializeOwned};
 use tracing::{debug, info};
 
-pub async fn msg_handler(event: LambdaEvent<SqsEventObj<serde_json::Value>>) -> Result<(), Error> {
+#[derive(Debug, Serialize, Deserialize)]
+pub struct EventBridgeTest {
+    name: String,
+    test_value: serde_json::Value,
+}
+
+pub async fn msg_handler(event: LambdaEvent<SqsEventObj<EventBridgeEvent<EventBridgeTest>>>) -> Result<(), Error> {
     info!("Received event: {:?}", event);
 
     for record in event.payload.records {
