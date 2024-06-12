@@ -65,6 +65,8 @@ services:
       - development
     deploy:
       replicas: 1
+    volumes:
+      - {{runtime.credentials_location}}:/root/.aws/credentials:ro
     environment:
       - AWS_LAMBDA_RUNTIME_API=http://sam-e-invoker:3030/{{lambda.name}}
       - AWS_LAMBDA_FUNCTION_NAME={{lambda.name}}
@@ -75,8 +77,6 @@ services:
       {% for key, value in lambda.environment_vars -%}
       - {{key}}={{value}}
       {% endfor -%}
-    volumes:
-      - {{runtime.credentials_location}}:/root/.aws/credentials:ro
 {% endfor %}
 
 {%- if frontend %}
