@@ -53,7 +53,7 @@ pub async fn response_handler(
         Some(invocation) => {
             debug!("Found the invocation to complete processing");
             debug!("Raw lambda response headers: {:?}", headers_hashmap);
-            debug!("Raw lambda response body: {:?}", body);
+            trace!("Raw lambda response body: {:?}", body);
 
             invocation.set_status(Status::Processed);
 

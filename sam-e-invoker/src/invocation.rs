@@ -66,26 +66,27 @@ pub async fn invoke(
             encodings::Body::Text(text) => {
                 if let Ok(parsed) = serde_json::from_str::<serde_json::Value>(text) {
                     debug!("Detected JSON response body. Returning JSON response.");
-                    Json(parsed).into_response()
+                    (status_code, Json(parsed)).into_response()
                 } else {
                     if let Some(content_type) = header_map.get("content-type") {
                         let value_string: &str =
                             str::from_utf8(content_type.as_bytes()).unwrap_or("unknown");
                         if value_string.contains("text/html") {
                             debug!("Detected HTML response body. Returning HTML response.");
-                            Html(text.clone()).into_response()
+                            (status_code, Html(text.clone())).into_response()
                         } else {
                             debug!("Defaulting to text response");
-                            text.clone().into_response()
+                            (status_code, text.clone()).into_response()
                         }
                     } else {
-                        warn!("No content type found from invocation response. Defaulting to text response");
-                        text.clone().into_response()
+                        // warn!("No content type found from invocation response. Defaulting to text response");
+                        warn!("No content type found from invocation response. Defaulting to HTML response");
+                        (status_code, Html(text.clone())).into_response()
                     }
                 }
             }
-            encodings::Body::Binary(binary) => binary.clone().into_response(),
-            encodings::Body::Empty => "No Response body found".into_response(),
+            encodings::Body::Binary(binary) => (status_code, binary.clone()).into_response(),
+            encodings::Body::Empty => (status_code, "No Response body found").into_response(),
         }
     } else {
         error!("No response body found. Returning empty response.");

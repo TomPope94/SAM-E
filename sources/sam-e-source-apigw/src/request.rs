@@ -87,27 +87,29 @@ pub async fn handler(
         return Ok("Failed to parse content type string into enum".into_response());
     };
 
+    let status_code_reqwest = response.status().as_u16();
+    let status_code = axum::http::StatusCode::from_u16(status_code_reqwest).unwrap_or(axum::http::StatusCode::INTERNAL_SERVER_ERROR);
     match response_type {
         ContentType::Json => {
             debug!("Parsing response data as JSON");
             let response_data = response.json::<serde_json::Value>().await?;
             debug!("Response data parsed successfully. Now returning...");
             trace!("Response data: {:#?}", response_data);
-            Ok(Json(response_data).into_response())
+            Ok((status_code, Json(response_data)).into_response())
         }
         ContentType::Text => {
             debug!("Parsing response data as text");
             let response_data = response.text().await?;
             debug!("Response data parsed successfully. Now returning...");
             trace!("Response data: {:#?}", response_data);
-            Ok(response_data.into_response())
+            Ok((status_code, response_data).into_response())
         }
         ContentType::Html => {
             debug!("Parsing response data as HTML");
             let response_data = response.text().await?;
             debug!("Response data parsed successfully. Now returning...");
             trace!("Response data: {:#?}", response_data);
-            Ok(Html(response_data).into_response())
+            Ok((status_code, Html(response_data)).into_response())
         }
     }
 }

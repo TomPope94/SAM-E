@@ -5,7 +5,7 @@ use anyhow::{anyhow, Result};
 use parking_lot::RwLock;
 use serde::{Deserialize, Serialize};
 use std::{collections::HashMap, sync::Arc};
-use tracing::{debug, warn};
+use tracing::{debug, trace, warn};
 use tokio::time::{sleep, Duration};
 use uuid::Uuid;
 
@@ -111,14 +111,14 @@ impl EventStore {
 
     pub fn add_event(&mut self, event_bus_name: &str, event: EventRequestItem) {
         debug!("Event request received. Adding to event store...");
-        debug!("Current event store: {:#?}", self);
+        trace!("Current event store: {:#?}", self);
 
         let mut event_buses = self.event_buses.write();
         let events = event_buses.entry(event_bus_name.to_string()).or_insert_with(Vec::new);
         events.push(event);
 
         debug!("Event added to event store");
-        debug!("New event store: {:#?}", self);
+        trace!("New event store: {:#?}", self);
     }
 
     pub async fn listen_for_events(&self, event_bus_name: String) {
@@ -139,7 +139,7 @@ impl EventStore {
 
                     if events.len() > 0 {
                         for event in events {
-                            debug!("Event received: {:#?}", event);
+                            trace!("Event received: {:#?}", event);
                             debug!("Processing event...");
 
                             for rule in event_rules.iter() {

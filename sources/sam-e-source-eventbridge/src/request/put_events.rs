@@ -1,11 +1,11 @@
 use crate::data::{store::{EventRequestItemBuilder, EventStore}, PutEventsRequest, PutEventsResponse, PutEventsResponseBuilder, PutEventsResultEntryBuilder};
 
 use anyhow::{anyhow, Result};
-use tracing::debug;
+use tracing::{debug, trace};
 
 pub async fn put_events_handler(put_events_request: PutEventsRequest, event_store: &EventStore) -> Result<PutEventsResponse> {
     debug!("Inside the put events handler");
-    debug!("PutEvents request received: {:#?}", put_events_request);
+    trace!("PutEvents request received: {:#?}", put_events_request);
 
     debug!("Adding event to event store");
     let mut entry_ids = Vec::new();
@@ -13,7 +13,7 @@ pub async fn put_events_handler(put_events_request: PutEventsRequest, event_stor
         let Some(event_bus_name) = &entry.event_bus_name else {
             return Err(anyhow!("Event bus name is required"));
         };
-        debug!("Adding entry to event bus: {:#?}", &entry.event_bus_name);
+        trace!("Adding entry to event bus: {:#?}", &entry.event_bus_name);
         
         let event_id = uuid::Uuid::new_v4();
         let new_event_request = EventRequestItemBuilder::new()
@@ -24,7 +24,7 @@ pub async fn put_events_handler(put_events_request: PutEventsRequest, event_stor
         let mut event_buses = event_store.event_buses.write();
         event_buses.entry(event_bus_name.clone()).or_insert_with(Vec::new).push(new_event_request);
         debug!("Entry added to the event bus successfully");
-        debug!("New state: {:#?}", event_buses);
+        trace!("New state: {:#?}", event_buses);
 
         let resp = PutEventsResultEntryBuilder::new()
             .with_event_id(event_id)
