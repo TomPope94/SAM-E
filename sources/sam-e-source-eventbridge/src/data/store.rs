@@ -151,7 +151,21 @@ impl EventStore {
                                     for s in source {
                                         if event.event.source == *s {
                                             debug!("Source matched");
-                                            matched = true;
+                                            if let Some(detail_type) = &event_pattern.detail_type {
+                                                debug!("Checking if detail_type also matches...");
+                                                for dt in detail_type {
+                                                    if event.event.detail_type == *dt {
+                                                        debug!("Detail type matched");
+                                                        matched = true;
+                                                    } else {
+                                                        debug!("Detail type did not match");
+                                                        continue;
+                                                    }
+                                                }
+                                            } else {
+                                                debug!("No detail type to check");
+                                                matched = true;
+                                            }
                                         } else {
                                             debug!("Source did not match");
                                             continue;
@@ -159,7 +173,8 @@ impl EventStore {
                                     }
                                 }
 
-                                if let Some(detail_type) = &event_pattern.detail_type {
+                                // Only interested in detail type if source has not matched
+                                if let (Some(detail_type), true) = (&event_pattern.detail_type, matched) {
                                     debug!("Checking detail_type...");
                                     for dt in detail_type {
                                         if event.event.detail_type == *dt {
