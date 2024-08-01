@@ -357,6 +357,7 @@ fn create_docker_compose(tera: &Tera, context: &Context) -> anyhow::Result<()> {
 /// the context provided. Also, writes the entrypoint.sh file to the same directory which is
 /// required for S3 triggers to be created in the local environment correctly.
 fn create_s3_dockerfile(tera: &Tera, context: &Context) -> anyhow::Result<()> {
+    trace!("Context for tera render: {:?}", context);
     let result = tera.render("s3-dockerfile", &context)?;
 
     fs::write(
