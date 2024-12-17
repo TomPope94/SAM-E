@@ -6,21 +6,21 @@ edition = "2021"
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
 [dependencies]
-anyhow = "1.0.79"
-aws-config = { version = "1.1.5", features = ["behavior-version-latest"] }
-aws_lambda_events = "0.13.0"
-axum = { version = "0.7.4", features = ["macros"] }
-chrono = { version = "0.4.32", features = ["serde"] }
-fancy-regex = "0.13.0"
-parking_lot = { version = "0.12.1", features = ["deadlock_detection"] }
-serde = "1.0"
-serde_json = "1.0"
-serde_yaml = "0.9.31"
-tokio = { version = "1.0", features = ["full"] }
-tower-http = { version = "0.5.1", features = ["cors"] }
-tracing = { version = "0.1", features = ["log"] }
-tracing-subscriber = { version = "0.3", default-features = false, features = ["ansi", "fmt", "env-filter"] }
-uuid = { version = "1.7.0", features = ["v4", "serde"] }
+anyhow = "1.0.94"
+aws-config = { version = "1.5.10", features = ["behavior-version-latest"] }
+aws_lambda_events = "0.16.0"
+axum = { version = "0.7.9", features = ["macros"] }
+chrono = { version = "0.4.39", features = ["serde"] }
+fancy-regex = "0.14.0"
+parking_lot = { version = "0.12.3", features = ["deadlock_detection"] }
+serde = "1.0.216"
+serde_json = "1.0.133"
+serde_yaml = "0.9.34"
+tokio = { version = "1.42.0", features = ["full"] }
+tower-http = { version = "0.6.2", features = ["cors"] }
+tracing = { version = "0.1.41", features = ["log"] }
+tracing-subscriber = { version = "0.3.19", default-features = false, features = ["ansi", "fmt", "env-filter"] }
+uuid = { version = "1.11.0", features = ["v4", "serde"] }
 
 # in-house crates
 sam-e-types = { path = "../sam-e-types" }

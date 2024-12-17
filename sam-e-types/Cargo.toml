@@ -6,13 +6,13 @@ edition = "2021"
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
 [dependencies]
-anyhow = "1.0.79"
-aws-config = { version = "1.1.5", features = ["behavior-version-latest"] }
-aws_lambda_events = "0.13.0"
-aws-sdk-sqs = "1.13.0"
-chrono = { version = "0.4.32", features = ["serde"] }
-serde = { version = "1.0", features = ["derive"] }
-serde_yaml = "0.9.30"
-fancy-regex = "0.13.0"
-tracing = { version = "0.1", features = ["log"] }
-uuid = { version = "1.8.0", features = ["v4", "serde"] }
+anyhow = "1.0.94"
+aws-config = { version = "1.5.10", features = ["behavior-version-latest"] }
+aws_lambda_events = "0.16.0"
+aws-sdk-sqs = "1.50.0"
+chrono = { version = "0.4.39", features = ["serde"] }
+serde = { version = "1.0.216", features = ["derive"] }
+serde_yaml = "0.9.34"
+fancy-regex = "0.14.0"
+tracing = { version = "0.1.41", features = ["log"] }
+uuid = { version = "1.11.0", features = ["v4", "serde"] }

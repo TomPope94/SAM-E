@@ -1,6 +1,6 @@
 use anyhow::{anyhow, Result};
 use aws_lambda_events::apigw::{
-    ApiGatewayProxyRequest, ApiGatewayProxyRequestContext, ApiGatewayRequestIdentity,
+    ApiGatewayProxyRequest, ApiGatewayProxyRequestContext, ApiGatewayRequestAuthorizer, ApiGatewayRequestIdentity
 };
 use axum::{
     extract::Json,
@@ -137,7 +137,7 @@ fn create_api_request_context(
         request_time_epoch: dt.timestamp_millis(),
         operation_name: None,
         identity: create_api_request_identity(headers),
-        authorizer: HashMap::new(),
+        authorizer: create_api_request_authorizer(),
     };
 
     request_context
@@ -160,5 +160,13 @@ fn create_api_request_identity(headers: &HeaderMap) -> ApiGatewayRequestIdentity
             .get("user-agent")
             .map(|v| v.to_str().unwrap_or("unknown").to_string()),
         user_arn: None,
+    }
+}
+
+fn create_api_request_authorizer() -> ApiGatewayRequestAuthorizer {
+    ApiGatewayRequestAuthorizer {
+        jwt: None,
+        iam: None,
+        fields: HashMap::new(),
     }
 }

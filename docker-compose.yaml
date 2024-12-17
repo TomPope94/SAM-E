@@ -18,5 +18,5 @@ services:
       - RUST_LOG=sam_e_invoker=debug,sam_e_source_apigw=debug,sam_e_source_sqs=debug,sam_e_source_s3=debug,sam_e_source_eventbridge=debug
       - CONFIG=$CONFIG
     volumes:
-      - /home/ubuntu/.aws/credentials:/root/.aws/credentials:ro
+      - /home/tom/.aws/credentials:/root/.aws/credentials:ro
 
