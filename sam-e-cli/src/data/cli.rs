@@ -37,6 +37,9 @@ pub struct StartArgs {
     /// A flag to run the docker files detached
     #[arg(short, long)]
     pub detached: bool,
+
+    #[arg(long)]
+    pub build: bool,
 }
 
 #[derive(Debug, Subcommand)]

@@ -33,7 +33,7 @@ pub async fn start(args: StartArgs) -> anyhow::Result<()> {
             let infrastructure = config.get_infrastructure();
 
             let mut cmd_str =
-                "docker compose --compatibility up --remove-orphans --build sam-e-invoker "
+                "docker compose --compatibility up --remove-orphans sam-e-invoker "
                     .to_string();
 
             let mut use_s3 = false;
@@ -73,7 +73,7 @@ pub async fn start(args: StartArgs) -> anyhow::Result<()> {
             let functions = config.get_lambdas();
 
             let mut cmd_str =
-                "docker compose --compatibility up --remove-orphans --build ".to_string();
+                "docker compose --compatibility up --remove-orphans ".to_string();
             for function in functions {
                 cmd_str.push_str(function.get_name());
                 cmd_str.push(' ');
@@ -106,7 +106,7 @@ pub async fn start(args: StartArgs) -> anyhow::Result<()> {
             info!("Starting all functions for group: {}", function_group_name);
 
             let mut cmd_str =
-                "docker compose --compatibility up --remove-orphans --build ".to_string();
+                "docker compose --compatibility up --remove-orphans ".to_string();
             for function_name in chosen_group {
                 cmd_str.push_str(function_name);
                 cmd_str.push(' ');
@@ -120,7 +120,7 @@ pub async fn start(args: StartArgs) -> anyhow::Result<()> {
 
             if let Some(frontend) = frontend {
                 let mut cmd_str =
-                    "docker compose --compatibility up --remove-orphans --build frontend_"
+                    "docker compose --compatibility up --remove-orphans frontend_"
                         .to_string();
                 cmd_str.push_str(frontend.get_name());
                 cmd_str.push(' ');
@@ -136,6 +136,10 @@ pub async fn start(args: StartArgs) -> anyhow::Result<()> {
             return Err(anyhow::Error::msg("Invalid selection"));
         }
     };
+
+    if args.build {
+        docker_cmd.push_str(" --build");
+    }
 
     if args.detached {
         docker_cmd.push_str(" -d");
