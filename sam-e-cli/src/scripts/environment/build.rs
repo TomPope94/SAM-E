@@ -135,5 +135,5 @@ pub fn build() -> anyhow::Result<()> {
     debug!("Now creating infrastructure files...");
 
     // Creates infrastructure files based on config (i.e. dockerfiles, docker-compose, configs etc)
-    create_infrastructure_files(&config)
+    create_infrastructure_files(&config, false)
 }

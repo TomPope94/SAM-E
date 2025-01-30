@@ -1,4 +1,5 @@
 pub mod build;
+pub mod deploy;
 pub mod init;
 pub mod rebuild;
 pub mod start;
@@ -19,5 +20,6 @@ pub async fn get_environment_script(subcommand: EnvironmentCommand) -> anyhow::R
         EnvironmentCommand::Start(args) => start::start(args).await,
         EnvironmentCommand::Rebuild => rebuild::rebuild(),
         EnvironmentCommand::Stop => stop::stop(),
+        EnvironmentCommand::Deploy => deploy::deploy(),
     }
 }

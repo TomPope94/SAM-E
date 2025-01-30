@@ -275,7 +275,7 @@ fn create_infrastructure_from_s3_resource(
 /// Dockerfile and entrypoint.sh for S3 and the custom.conf for SQS. This is done by using Tera to
 /// render the templates with the context provided by the config. The files are then written to the
 /// .sam-e directory. All files are embedded in the binary so no need to worry about them being lost.
-pub fn create_infrastructure_files(config: &Config) -> anyhow::Result<()> {
+pub fn create_infrastructure_files(config: &Config, dev_deploy: bool) -> anyhow::Result<()> {
     let infrastructure = config.get_infrastructure();
 
     let mut tera = Tera::default();
@@ -314,6 +314,14 @@ pub fn create_infrastructure_files(config: &Config) -> anyhow::Result<()> {
         return Err(Error::msg("Failed to find docker-compose template"));
     };
 
+    if let Some(docker_dev_template) = Asset::get("docker-compose.dev.yaml") {
+        let raw_data = docker_dev_template.data;
+        tera.add_raw_template("docker-compose.dev", &String::from_utf8_lossy(&raw_data))?;
+    } else {
+        error!("Failed to find docker-compose dev template");
+        return Err(Error::msg("Failed to find docker-compose dev template"));
+    };
+
     let mut has_s3 = false;
     let mut has_queue = false;
 
@@ -339,16 +347,27 @@ pub fn create_infrastructure_files(config: &Config) -> anyhow::Result<()> {
         debug!("No SQS infrastructure detected. Skipping creation of queue config");
     }
 
-    create_docker_compose(&tera, &context)?;
+    create_docker_compose(&tera, &context, dev_deploy)?;
     Ok(())
 }
 
 /// Actually writes the docker-compose file to the .sam-e directory after rendering via tera
 /// template with the context provided
-fn create_docker_compose(tera: &Tera, context: &Context) -> anyhow::Result<()> {
-    let result = tera.render("docker-compose", &context)?;
+fn create_docker_compose(tera: &Tera, context: &Context, dev_deploy: bool) -> anyhow::Result<()> {
+    let result = if dev_deploy {
+        tera.render("docker-compose.dev", &context)?
+    } else {
+        tera.render("docker-compose", &context)?
+    };
 
-    fs::write(format!("{}/docker-compose.yaml", SAM_E_DIRECTORY), result)?;
+    if dev_deploy {
+        fs::write(
+            format!("{}/docker-compose.dev.yaml", SAM_E_DIRECTORY),
+            result,
+        )?;
+    } else {
+        fs::write(format!("{}/docker-compose.yaml", SAM_E_DIRECTORY), result)?;
+    }
 
     Ok(())
 }

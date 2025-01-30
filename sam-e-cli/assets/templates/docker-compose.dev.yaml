@@ -51,14 +51,7 @@ services:
 {% for lambda in lambdas %}
   {{lambda.name}}:
     init: true
-    image: {{lambda.image}}
-    build:
-      context: {{lambda.docker_build.context}}
-      dockerfile: {{lambda.docker_build.dockerfile}}
-      {%- if lambda.docker_build.use_ssh %}
-      ssh:
-        - default
-      {%- endif %}
+    image: ${REGISTRY}/{{lambda.image}}:latest
     networks:
       - development
     deploy:
@@ -82,21 +75,12 @@ services:
     init: true
     build:
       context: {{frontend.docker_build.context}}
-      dockerfile: {{frontend.docker_build.dockerfile}}
-    working_dir: /frontend
-    entrypoint: /frontend/entrypoint.sh
-    volumes:
-      - ./node_modules:/frontend/node_modules
+      dockerfile: dockerfile.nginx
+    ports:
+      - 8080:80
     networks:
       - development
-    ports:
-      - {{frontend.port}}:{{frontend.port}}
-    deploy:
-      replicas: 1
-    environment:
-      {% for key, value in frontend.env_vars -%}
-      - {{key}}={{value}}
-      {% endfor -%}
+    restart: unless-stopped
 {%- endif %}
 
   # *********************** Custom infrastructure ***************************
@@ -166,7 +150,7 @@ services:
     networks:
       - development
     volumes:
-      - ./local-s3/minio:/data
+      - s3-local:/data
 {%- endif %}
 {%- endfor %}
 

@@ -93,6 +93,8 @@ pub enum EnvironmentCommand {
     Start(StartArgs),
     #[command(about = "Stop the SAM-E environment")]
     Stop,
+    #[command(about = "Deploy the SAM-E environment to dev or AWS (Prod)")]
+    Deploy,
 }
 
 #[derive(Debug, Subcommand)]
