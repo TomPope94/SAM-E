@@ -3,7 +3,7 @@ use tracing::{debug, info, warn};
 use crate::scripts::{
     environment::build::infrastructure::create_infrastructure_files,
     template::utils::{get_env_var_additions, get_env_var_removals, get_template_lambda},
-    utils::{check_init, get_config},
+    utils::{check_init, get_config, get_sam_e_directory_path},
 };
 use std::process::Command;
 
@@ -69,6 +69,18 @@ pub fn deploy() -> anyhow::Result<()> {
 
             info!("Pushing lambdas to private registry...");
             for lambda in lambdas {
+                debug!("Building lambda: {}", lambda.get_name());
+                let mut build_sh = Command::new("sh");
+                build_sh
+                    .arg("-c")
+                    .arg(format!(
+                        "docker compose build {}",
+                        lambda.get_name()
+                    ))
+                    .current_dir(get_sam_e_directory_path()?)
+                    .status()?;
+
+                debug!("Re-tagging lambda: {}", lambda.get_name());
                 let mut tag_sh = Command::new("sh");
                 tag_sh
                     .arg("-c")
@@ -79,6 +91,7 @@ pub fn deploy() -> anyhow::Result<()> {
                     ))
                     .status()?;
 
+                debug!("Pushing lambda: {}", lambda.get_name());
                 let mut push_sh = Command::new("sh");
                 push_sh
                     .arg("-c")
