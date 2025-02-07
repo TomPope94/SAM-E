@@ -153,10 +153,6 @@ pub async fn start(args: StartArgs) -> anyhow::Result<()> {
         docker_cmd.push_str(" -d");
     }
 
-    if env_selection == 1 {
-        docker_cmd.push_str(" --file docker-compose.dev.yaml");
-    }
-
     debug!("Running the docker command: {}", docker_cmd);
 
     let mut sh = Command::new("sh");
@@ -170,8 +166,13 @@ pub async fn start(args: StartArgs) -> anyhow::Result<()> {
         sh.env("REGISTRY", "homelab.local:5000");
     }
 
-    sh.current_dir(get_sam_e_directory_path()?)
-        .arg(docker_cmd)
+    if env_selection == 1 {
+        sh.current_dir(format!("{}/dev", get_sam_e_directory_path()?));
+    } else {
+        sh.current_dir(format!("{}/local", get_sam_e_directory_path()?));
+    }
+
+    sh.arg(docker_cmd)
         .status()?;
 
     Ok(())

@@ -362,11 +362,11 @@ fn create_docker_compose(tera: &Tera, context: &Context, dev_deploy: bool) -> an
 
     if dev_deploy {
         fs::write(
-            format!("{}/docker-compose.dev.yaml", SAM_E_DIRECTORY),
+            format!("{}/dev/docker-compose.yaml", SAM_E_DIRECTORY),
             result,
         )?;
     } else {
-        fs::write(format!("{}/docker-compose.yaml", SAM_E_DIRECTORY), result)?;
+        fs::write(format!("{}/local/docker-compose.yaml", SAM_E_DIRECTORY), result)?;
     }
 
     Ok(())

@@ -4,7 +4,7 @@ services:
   # Custom local invoker. Will run the local store for lambda invocation and handle via Lambda Runtime API
   sam-e-invoker:
     init: true
-    image: sam-e-invoker
+    image: tompope94/sam-e-invoker
     build: 
       context: .
       dockerfile: dockerfile
