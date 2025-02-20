@@ -73,6 +73,9 @@ pub enum FunctionCommand {
 
     #[clap(subcommand)]
     Group(FunctionGroupCommand),
+
+    #[command(about = "Build all or a specific function")]
+    Build,
 }
 
 #[derive(Debug, Subcommand)]

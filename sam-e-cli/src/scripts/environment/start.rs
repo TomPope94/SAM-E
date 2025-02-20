@@ -161,7 +161,7 @@ pub async fn start(args: StartArgs) -> anyhow::Result<()> {
     sh.arg("-c")
         .env("COMPOSE_DOCKER_CLI_BUILD", "1") // Allows individual docker ignore files
         .env("CONFIG", config_string);
-    
+
     if env_selection == 1 {
         sh.env("REGISTRY", "homelab.local:5000");
     }
@@ -172,8 +172,7 @@ pub async fn start(args: StartArgs) -> anyhow::Result<()> {
         sh.current_dir(format!("{}/local", get_sam_e_directory_path()?));
     }
 
-    sh.arg(docker_cmd)
-        .status()?;
+    sh.arg(docker_cmd).status()?;
 
     Ok(())
 }

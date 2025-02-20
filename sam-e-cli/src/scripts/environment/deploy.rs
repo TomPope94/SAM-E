@@ -73,10 +73,7 @@ pub fn deploy() -> anyhow::Result<()> {
                 let mut build_sh = Command::new("sh");
                 build_sh
                     .arg("-c")
-                    .arg(format!(
-                        "docker compose build {}",
-                        lambda.get_name()
-                    ))
+                    .arg(format!("docker compose build {}", lambda.get_name()))
                     .current_dir(get_sam_e_directory_path()?)
                     .status()?;
 
