@@ -11,6 +11,7 @@ pub struct Runtime {
     use_queue_source: bool,
     use_s3_source: bool,
     credentials_location: String,
+    docker_registry: Option<String>,
 }
 
 impl Default for Runtime {
@@ -21,6 +22,7 @@ impl Default for Runtime {
             use_queue_source: false,
             use_s3_source: false,
             credentials_location: String::from(""),
+            docker_registry: None,
         }
     }
 }
@@ -67,6 +69,12 @@ impl Runtime {
     pub fn get_credentials_location(&self) -> &String {
         &self.credentials_location
     }
+
+    pub fn get_docker_registry(&self) -> anyhow::Result<&String> {
+        self.docker_registry
+            .as_ref()
+            .ok_or_else(|| anyhow::anyhow!("Docker registry is not set"))
+    }
 }
 
 pub struct RuntimeBuilder {
@@ -75,6 +83,7 @@ pub struct RuntimeBuilder {
     use_queue_source: bool,
     use_s3_source: bool,
     credentials_location: Option<String>,
+    docker_registry: Option<String>,
 }
 
 impl RuntimeBuilder {
@@ -85,6 +94,7 @@ impl RuntimeBuilder {
             use_queue_source: false,
             use_s3_source: false,
             credentials_location: None,
+            docker_registry: None,
         }
     }
 
@@ -117,6 +127,11 @@ impl RuntimeBuilder {
         self
     }
 
+    pub fn with_docker_registry(mut self, docker_registry: String) -> Self {
+        self.docker_registry = Some(docker_registry);
+        self
+    }
+
     pub fn build(self) -> Runtime {
         let Some(credentials_location) = self.credentials_location else {
             panic!("Credentials location must be set");
@@ -128,6 +143,7 @@ impl RuntimeBuilder {
             use_queue_source: self.use_queue_source,
             use_s3_source: self.use_s3_source,
             credentials_location,
+            docker_registry: self.docker_registry,
         }
     }
 }

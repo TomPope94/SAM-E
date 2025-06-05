@@ -12,5 +12,5 @@ pub fn rebuild() -> anyhow::Result<()> {
     let config = get_config()?;
 
     // Creates infrastructure files based on config (i.e. dockerfiles, docker-compose, configs etc)
-    create_infrastructure_files(&config, false)
+    create_infrastructure_files(&config)
 }

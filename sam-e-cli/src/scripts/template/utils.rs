@@ -15,7 +15,7 @@ pub fn get_template_lambda(lambda: &Lambda, templates: &Vec<Template>) -> anyhow
     let template = lambda.get_template_name();
 
     let Some(matched_template) = templates.iter().find(|t| t.get_name() == template) else {
-        return Err(anyhow::anyhow!("Template not found"));
+        return Err(anyhow::anyhow!("Template not found: {}", template));
     };
 
     let resources_from_template = build_template(matched_template)?;
@@ -25,7 +25,10 @@ pub fn get_template_lambda(lambda: &Lambda, templates: &Vec<Template>) -> anyhow
         .iter()
         .find(|l| l.get_name() == lambda.get_name())
     else {
-        return Err(anyhow::anyhow!("Lambda not found in template"));
+        return Err(anyhow::anyhow!(
+            "Lambda not found in template: {}",
+            lambda.get_name()
+        ));
     };
 
     Ok(matching_lambda.clone())

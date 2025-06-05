@@ -2,7 +2,11 @@ networks:
   development:
     attachable: true
 
+{%- for infra in infrastructure %}
+{%- if infra.infrastructure_type == "Mysql" or infra.infrastructure_type == "Postgres" or infra.infrastructure_type == "SQS" or infra.infrastructure_type == "S3" %}
 volumes:
+{%- endif %}
+{%- endfor %}
 {%- set postgres_volume = false %}
 {%- set mysql_volume = false %}
 {%- set sqs_volume = false %}
@@ -51,7 +55,11 @@ services:
 {% for lambda in lambdas %}
   {{lambda.name}}:
     init: true
-    image: ${REGISTRY}/{{lambda.image}}:latest
+    {%- if runtime.docker_registry %}
+    image: {{runtime.docker_registry}}/{{lambda.image}}:latest
+    {%- else %}
+    image: {{lambda.image}}:latest
+    {%- endif %}
     networks:
       - development
     deploy:

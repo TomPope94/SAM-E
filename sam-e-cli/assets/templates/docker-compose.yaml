@@ -2,7 +2,11 @@ networks:
   development:
     attachable: true
 
+{%- for infra in infrastructure %}
+{%- if infra.infrastructure_type == "Mysql" or infra.infrastructure_type == "Postgres" or infra.infrastructure_type == "SQS" or infra.infrastructure_type == "S3" %}
 volumes:
+{%- endif %}
+{%- endfor %}
 {%- set postgres_volume = false %}
 {%- set mysql_volume = false %}
 {%- set sqs_volume = false %}

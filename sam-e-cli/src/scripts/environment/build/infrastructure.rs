@@ -275,7 +275,7 @@ fn create_infrastructure_from_s3_resource(
 /// Dockerfile and entrypoint.sh for S3 and the custom.conf for SQS. This is done by using Tera to
 /// render the templates with the context provided by the config. The files are then written to the
 /// .sam-e directory. All files are embedded in the binary so no need to worry about them being lost.
-pub fn create_infrastructure_files(config: &Config, dev_deploy: bool) -> anyhow::Result<()> {
+pub fn create_infrastructure_files(config: &Config) -> anyhow::Result<()> {
     let infrastructure = config.get_infrastructure();
 
     let mut tera = Tera::default();
@@ -347,31 +347,51 @@ pub fn create_infrastructure_files(config: &Config, dev_deploy: bool) -> anyhow:
         debug!("No SQS infrastructure detected. Skipping creation of queue config");
     }
 
-    create_docker_compose(&tera, &context, dev_deploy)?;
+    create_docker_compose(&tera, &context, false)?;
+    create_docker_compose(&tera, &context, true)?;
     Ok(())
 }
 
 /// Actually writes the docker-compose file to the .sam-e directory after rendering via tera
 /// template with the context provided
 fn create_docker_compose(tera: &Tera, context: &Context, dev_deploy: bool) -> anyhow::Result<()> {
+    info!("Creating docker-compose file in .sam-e directory");
     let result = if dev_deploy {
+        debug!("Using development docker-compose template");
         tera.render("docker-compose.dev", &context)?
     } else {
+        debug!("Using local docker-compose template");
         tera.render("docker-compose", &context)?
     };
 
+    debug!("Docker-compose file rendered successfully. Writing to disk...");
     if dev_deploy {
+        if let Ok(dir) = fs::read_dir(format!("{}/dev", SAM_E_DIRECTORY)) {
+            if dir.count() > 0 {
+                warn!("The .sam-e/dev directory is not empty. Overwriting existing docker-compose.yaml file.");
+            }
+        } else {
+            fs::create_dir_all(format!("{}/dev", SAM_E_DIRECTORY))?;
+        }
         fs::write(
             format!("{}/dev/docker-compose.yaml", SAM_E_DIRECTORY),
             result,
         )?;
     } else {
+        if let Ok(dir) = fs::read_dir(format!("{}/local", SAM_E_DIRECTORY)) {
+            if dir.count() > 0 {
+                warn!("The .sam-e/local directory is not empty. Overwriting existing docker-compose.yaml file.");
+            }
+        } else {
+            fs::create_dir_all(format!("{}/local", SAM_E_DIRECTORY))?;
+        }
         fs::write(
             format!("{}/local/docker-compose.yaml", SAM_E_DIRECTORY),
             result,
         )?;
     }
 
+    debug!("Docker-compose file written successfully.");
     Ok(())
 }
 

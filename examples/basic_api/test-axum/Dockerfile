@@ -1,5 +1,5 @@
 # Builder
-FROM crcdockerdevops/rust-musl:1.76 AS chef
+FROM tompope94/rust-musl:1.82 AS chef 
 
 ARG TARGETPLATFORM
 RUN if [ "${TARGETPLATFORM#*linux/}" = "amd64" ]; then \
