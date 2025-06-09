@@ -162,8 +162,12 @@ pub async fn start(args: StartArgs) -> anyhow::Result<()> {
         .env("COMPOSE_DOCKER_CLI_BUILD", "1") // Allows individual docker ignore files
         .env("CONFIG", config_string);
 
+    let runtime = config.get_runtime();
+    let docker_registry = runtime.get_docker_registry();
     if env_selection == 1 {
-        sh.env("REGISTRY", "homelab.local:5000");
+        if let Ok(registry) = docker_registry {
+            sh.env("REGISTRY", registry);
+        }
     }
 
     if env_selection == 1 {
