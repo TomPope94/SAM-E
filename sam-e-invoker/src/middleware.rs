@@ -6,7 +6,7 @@ use axum::{
     response::IntoResponse,
 };
 use tower_http::cors::{Any, CorsLayer};
-use tracing::trace;
+use tracing::{trace, warn};
 
 pub fn cors_layer() -> CorsLayer {
     CorsLayer::new()
@@ -21,6 +21,13 @@ pub async fn headers_mw(req: Request<Body>, next: Next) -> impl IntoResponse {
     trace!("Request = {:#?}", req);
 
     let (mut parts, body) = req.into_parts();
+
+    // Log all headers
+    // trace!("All headers: {:#?}", parts.headers);
+    //
+    // let req = Request::from_parts(parts, body);
+    // next.run(req).await
+
     let body_bytes = body_to_bytes("middleware request", body).await.unwrap();
 
     // TODO - how does this work for non-Rust runtimes?
@@ -67,4 +74,9 @@ async fn body_to_bytes(
     };
 
     Ok(bytes)
+}
+
+pub async fn not_found_handler(req: Request<Body>) -> impl IntoResponse {
+    warn!("Not found handler called for request: {:#?}", req);
+    (StatusCode::NOT_FOUND, "Not Found")
 }

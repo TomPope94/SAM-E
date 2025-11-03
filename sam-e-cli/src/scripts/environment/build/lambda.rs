@@ -110,6 +110,7 @@ fn parse_function(
         template_name,
         PackageType::Image,
         None,
+        None,
     );
 
     Ok(lambda)

@@ -6,12 +6,59 @@ use aws_lambda_events::{
 use chrono::{DateTime, Local};
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
+use tokio::sync::mpsc;
 use uuid::Uuid;
+
+#[derive(Debug, Clone)]
+pub enum StreamChunk {
+    Data(Vec<u8>),      // Payload data
+    Complete,           // Stream finished successfully
+    Error(String),      // Stream error
+}
+
+#[derive(Debug, Clone)]
+pub struct Extension {
+    pub id: String,              // UUID assigned to this extension
+    pub name: String,            // Extension name from registration
+    event_sender: mpsc::UnboundedSender<ExtensionEvent>,
+}
+
+impl Extension {
+    pub fn new(
+        id: String,
+        name: String,
+        event_sender: mpsc::UnboundedSender<ExtensionEvent>,
+    ) -> Self {
+        Self {
+            id,
+            name,
+            event_sender,
+        }
+    }
+
+    pub fn get_event_sender(&self) -> &mpsc::UnboundedSender<ExtensionEvent> {
+        &self.event_sender
+    }
+}
+
+#[derive(Debug, Clone)]
+pub enum ExtensionEvent {
+    Invoke {
+        request_id: String,
+        deadline_ms: u64,
+        invoked_function_arn: String,
+    },
+    Shutdown {
+        reason: String,
+        deadline_ms: u64,
+    },
+}
 
 #[derive(Debug, Deserialize, Serialize, Clone, Copy, PartialEq, Eq)]
 pub enum Status {
     Pending,
     Processing,
+    Streaming,          // Lambda is streaming response
     Processed,
 }
 
@@ -30,6 +77,10 @@ pub struct Invocation {
     response: ApiGatewayProxyResponse,
     response_headers: HashMap<String, String>,
     lambda_name: String,
+    #[serde(skip)]
+    stream_sender: Option<mpsc::UnboundedSender<StreamChunk>>,
+    #[serde(skip)]
+    extensions: Vec<Extension>,
 }
 
 impl Invocation {
@@ -42,6 +93,8 @@ impl Invocation {
             response: ApiGatewayProxyResponse::default(),
             response_headers: HashMap::new(),
             lambda_name: String::new(),
+            stream_sender: None,
+            extensions: Vec::new(),
         }
     }
 
@@ -88,6 +141,45 @@ impl Invocation {
     pub fn set_lambda_name(&mut self, name: String) {
         self.lambda_name = name;
     }
+
+    pub fn set_stream_sender(&mut self, sender: mpsc::UnboundedSender<StreamChunk>) {
+        self.stream_sender = Some(sender);
+    }
+
+    pub fn get_stream_sender(&self) -> Option<&mpsc::UnboundedSender<StreamChunk>> {
+        self.stream_sender.as_ref()
+    }
+
+    pub fn send_chunk(&self, chunk: StreamChunk) -> Result<()> {
+        if let Some(sender) = &self.stream_sender {
+            sender.send(chunk).map_err(|e| anyhow!("Failed to send chunk: {}", e))?;
+            Ok(())
+        } else {
+            Err(anyhow!("No stream sender available"))
+        }
+    }
+
+    // Extension management methods
+    pub fn add_extension(&mut self, extension: Extension) {
+        self.extensions.push(extension);
+    }
+
+    pub fn get_extensions(&self) -> &Vec<Extension> {
+        &self.extensions
+    }
+
+    pub fn get_extension_by_id(&self, id: &str) -> Option<&Extension> {
+        self.extensions.iter().find(|ext| ext.id == id)
+    }
+
+    pub fn send_event_to_all_extensions(&self, event: ExtensionEvent) -> Result<()> {
+        for extension in &self.extensions {
+            extension.event_sender
+                .send(event.clone())
+                .map_err(|e| anyhow!("Failed to send event to extension {}: {}", extension.name, e))?;
+        }
+        Ok(())
+    }
 }
 
 pub struct InvocationBuilder {
@@ -98,6 +190,8 @@ pub struct InvocationBuilder {
     response: ApiGatewayProxyResponse,
     response_headers: HashMap<String, String>,
     lambda_name: Option<String>,
+    stream_sender: Option<mpsc::UnboundedSender<StreamChunk>>,
+    extensions: Vec<Extension>,
 }
 
 impl InvocationBuilder {
@@ -110,6 +204,8 @@ impl InvocationBuilder {
             response: ApiGatewayProxyResponse::default(),
             response_headers: HashMap::new(),
             lambda_name: None,
+            stream_sender: None,
+            extensions: Vec::new(),
         }
     }
 
@@ -148,6 +244,16 @@ impl InvocationBuilder {
         self
     }
 
+    pub fn with_stream_sender(mut self, sender: mpsc::UnboundedSender<StreamChunk>) -> Self {
+        self.stream_sender = Some(sender);
+        self
+    }
+
+    pub fn with_extensions(mut self, extensions: Vec<Extension>) -> Self {
+        self.extensions = extensions;
+        self
+    }
+
     pub fn build(self) -> Result<Invocation> {
         let Some(request) = self.request else {
             return Err(anyhow!("Request is required to build an invocation"));
@@ -165,6 +271,8 @@ impl InvocationBuilder {
             response: self.response,
             response_headers: self.response_headers,
             lambda_name,
+            stream_sender: self.stream_sender,
+            extensions: self.extensions,
         })
     }
 }

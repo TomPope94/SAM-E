@@ -38,6 +38,7 @@ pub enum ContentType {
     Json,
     Html,
     Text,
+    EventStream,
 }
 
 impl FromStr for ContentType {
@@ -52,6 +53,9 @@ impl FromStr for ContentType {
         }
         if s.contains("text/plain") {
             return Ok(ContentType::Text);
+        }
+        if s.contains("text/event-stream") {
+            return Ok(ContentType::EventStream);
         }
 
         Err(())

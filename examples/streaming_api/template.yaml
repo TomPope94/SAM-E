@@ -1,0 +1,106 @@
+Transform: AWS::Serverless-2016-10-31
+
+Parameters:
+  EnvironmentName:
+    Description: The environment name for the streaming API example
+    Type: String
+    Default: development
+
+Resources:
+  StreamingApiGateway:
+    Type: AWS::Serverless::Api
+    Properties:
+      Name: Streaming_Test_API
+      Description: API Gateway for testing Lambda streaming responses
+      StageName: Prod
+    Domain:
+      DomainName: StreamingTest
+      CertificateArn: Test
+
+  AppApiDomainMapping:
+    Type: AWS::ApiGateway::BasePathMapping
+    Properties:
+      DomainName: Test
+      RestApiId: StreamingApiGateway
+      BasePath: stream
+      Stage: 
+        Ref: StreamingApiGateway.Stage
+
+  StreamingLambda:
+    Type: AWS::Serverless::Function
+    Properties:
+      PackageType: Image
+      Architectures:
+        - x86_64
+      ImageUri: streaming-lambda
+      Events:
+        StreamEndpoint:
+          Type: Api
+          Properties:
+            RestApiId:
+              Ref: StreamingApiGateway
+            Path: /stream
+            Method: GET
+        ChunksEndpoint:
+          Type: Api
+          Properties:
+            RestApiId: StreamingApiGateway
+            Path: /chunks
+            Method: GET
+        NonStreamEndpoint:
+          Type: Api
+          Properties:
+            RestApiId: StreamingApiGateway
+            Path: /normal
+            Method: GET
+        AllPaths:
+          Type: Api
+          Properties:
+            RestApiId: StreamingApiGateway
+            Path: /{path+}
+            Method: ANY
+      Timeout: 30
+      MemorySize: 128
+      Environment:
+        Variables:
+          RUST_LOG: info
+
+  FastApiGateway:
+    Type: AWS::Serverless::Api
+    Properties:
+      Name: FastAPI_Streaming_Test_API
+      Description: API Gateway for testing fast API Lambda streaming responses
+      StageName: Prod
+    Domain:
+      DomainName: StreamingTest
+      CertificateArn: Test
+
+  FastApiDomainMapping:
+    Type: AWS::ApiGateway::BasePathMapping
+    Properties:
+      DomainName: Test
+      RestApiId: FastApiGateway
+      BasePath: fast
+      Stage: 
+        Ref: FastApiGateway.Stage
+
+
+  FastAPILambda:
+    Type: AWS::Serverless::Function
+    Properties:
+      PackageType: Image
+      Architectures:
+        - x86_64
+      ImageUri: fast-api-lambda
+      Events:
+        AllPaths:
+          Type: Api
+          Properties:
+            RestApiId: FastApiGateway
+            Path: /{path+}
+            Method: ANY
+      Timeout: 30
+      MemorySize: 128
+      Environment:
+        Variables:
+          RUST_LOG: info

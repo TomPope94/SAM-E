@@ -1,45 +1,50 @@
-FROM tompope94/rust-musl:1.82 AS chef 
+# syntax=docker/dockerfile:1
 
-ARG TARGETPLATFORM
-RUN if [ "${TARGETPLATFORM#*linux/}" = "amd64" ]; then \
-    rustup target add x86_64-unknown-linux-musl; \
-    else \
-    rustup target add aarch64-unknown-linux-musl; \
-    fi \
-    && cargo install cargo-chef
+# Builder stage
+FROM --platform=$BUILDPLATFORM rust:latest AS builder
+
+# Install musl development tools
+RUN apt-get update && apt-get install -y \
+  musl-tools \
+  && rm -rf /var/lib/apt/lists/*
+
 WORKDIR /app
 
-FROM chef AS planner
-COPY . .
-RUN cargo chef prepare --recipe-path recipe.json
+# Use automatic platform detection from buildx
+ARG TARGETARCH
 
-FROM chef AS builder
-COPY --from=planner /app/recipe.json recipe.json
-RUN if [ "${TARGETPLATFORM#*linux/}" = "amd64" ]; then \
-    cargo chef cook --target x86_64-unknown-linux-musl --recipe-path recipe.json; \
-    else \
-    cargo chef cook --target aarch64-unknown-linux-musl --recipe-path recipe.json; \
-    fi
-COPY . .
-RUN if [ "${TARGETPLATFORM#*linux/}" = "amd64" ]; then \
-    cargo build --target x86_64-unknown-linux-musl --release; \
-    mv target/x86_64-unknown-linux-musl/release /usr/local/release/; \
-    else \
-    cargo build --target aarch64-unknown-linux-musl --release; \
-    mv target/aarch64-unknown-linux-musl/release /usr/local/release/; \
-    fi
+# Add the appropriate Rust target based on architecture
+RUN case "$TARGETARCH" in \
+  "amd64")  rustup target add x86_64-unknown-linux-musl ;; \
+  "arm64")  rustup target add aarch64-unknown-linux-musl ;; \
+  *)        echo "Unsupported architecture: $TARGETARCH" && exit 1 ;; \
+  esac
 
-# Final
-FROM debian:11-slim AS runtime
-ARG TARGETPLATFORM
+# Copy source code
+COPY . .
+
+# Use BuildKit cache mount for cargo registry and git
+RUN --mount=type=cache,target=/usr/local/cargo/registry \
+  --mount=type=cache,target=/usr/local/cargo/git \
+  --mount=type=cache,target=/app/target \
+  case "$TARGETARCH" in \
+  "amd64")  cargo build --release --target x86_64-unknown-linux-musl && \
+  mkdir -p /usr/local/release && \
+  cp -r target/x86_64-unknown-linux-musl/release/* /usr/local/release/ ;; \
+  "arm64")  cargo build --release --target aarch64-unknown-linux-musl && \
+  mkdir -p /usr/local/release && \
+  cp -r target/aarch64-unknown-linux-musl/release/* /usr/local/release/ ;; \
+  esac
+
+# Runtime stage
+FROM debian:bookworm-slim AS runtime
 
 RUN apt-get update && apt-get install -y \
-    ca-certificates \
-    wget \
-    && rm -rf /var/lib/apt/lists/*
+  ca-certificates \
+  wget \
+  && rm -rf /var/lib/apt/lists/*
 
 COPY --from=builder /usr/local/release /app/release/
-
 COPY start.sh /app/start.sh
 RUN chmod +x /app/start.sh
 

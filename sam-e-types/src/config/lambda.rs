@@ -22,6 +22,7 @@ pub struct Lambda {
     template_name: String,
     package_type: PackageType,
     docker_build: Option<DockerBuild>,
+    docker_ip: Option<String>,
 }
 
 impl Lambda {
@@ -33,6 +34,7 @@ impl Lambda {
         template_name: &str,
         package_type: PackageType,
         docker_build: Option<DockerBuild>,
+        docker_ip: Option<String>,
     ) -> Self {
         Self {
             name,
@@ -42,6 +44,7 @@ impl Lambda {
             template_name: template_name.to_string(),
             package_type,
             docker_build,
+            docker_ip,
         }
     }
 
@@ -101,5 +104,12 @@ impl Lambda {
     }
     pub fn set_docker_build(&mut self, docker_build: DockerBuild) {
         self.docker_build = Some(docker_build);
+    }
+
+    pub fn get_docker_ip(&self) -> Option<&String> {
+        self.docker_ip.as_ref()
+    }
+    pub fn set_docker_ip(&mut self, docker_ip: String) {
+        self.docker_ip = Some(docker_ip);
     }
 }

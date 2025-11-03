@@ -1,20 +1,24 @@
-mod data;
-mod middleware;
-mod invocation;
 mod api_response;
+mod data;
+mod extension;
+mod invocation;
+mod middleware;
 
 use axum::{
     routing::{get, post},
     Router,
 };
 use std::env;
+use std::net::SocketAddr;
 use tracing::{debug, info};
 use tracing_subscriber::EnvFilter;
 
 use data::api::ApiState;
-use invocation::{init_error, invoke, invocation_error, next, response};
+use invocation::{init_error, invocation_error, invoke, response};
 
 use sam_e_types::config::Config;
+
+use crate::invocation::next_host;
 
 #[tokio::main]
 async fn main() -> anyhow::Result<()> {
@@ -34,7 +38,7 @@ async fn main() -> anyhow::Result<()> {
 
     debug!("Setting up invocation endpoints for Lambda runtime API");
     let invocation_routes = Router::new()
-        .route("/next", get(next::request_handler))
+        .route("/next", get(next_host::request_handler))
         .route("/:request_id/response", post(response::response_handler))
         .route(
             "/:request_id/error",
@@ -42,27 +46,37 @@ async fn main() -> anyhow::Result<()> {
         )
         .route_layer(axum::middleware::from_fn(middleware::headers_mw));
 
+    debug!("Setting up extension endpoints for Lambda Extension API");
+    let extension_routes = Router::new()
+        .route("/register", post(extension::register_host::handle))
+        .route("/event/next", get(extension::event::handle))
+        .route_layer(axum::middleware::from_fn(middleware::headers_mw));
+
     let app = Router::new()
-        .nest(
-            "/:container_name/2018-06-01/runtime/invocation",
-            invocation_routes,
-        )
+        // Routes with function name in path (legacy format for sources)
+        .nest("/2018-06-01/runtime/invocation", invocation_routes)
+        .nest("/2020-01-01/extension", extension_routes)
         .route(
             "/:container_name/2018-06-01/runtime/init/error",
             post(init_error::response_handler),
         )
         .route(
-            "/2018-06-01/runtime/invocation/:request_id/response",
-            post(response::response_handler),
+            "/2018-06-01/runtime/init/error",
+            post(init_error::response_handler),
         )
         .route("/invoke", post(invoke))
+        .fallback(middleware::not_found_handler)
         .layer(middleware::cors_layer())
         .with_state(api_state);
 
     let listener = tokio::net::TcpListener::bind("0.0.0.0:3030").await.unwrap();
     info!("listening on {}", listener.local_addr().unwrap());
-    axum::serve(listener, app).await.unwrap();
+    axum::serve(
+        listener,
+        app.into_make_service_with_connect_info::<SocketAddr>(),
+    )
+    .await
+    .unwrap();
 
     Ok(())
 }
-
