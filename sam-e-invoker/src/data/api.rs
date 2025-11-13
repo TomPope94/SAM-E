@@ -1,12 +1,13 @@
 use crate::data::store::Store;
 
-use bollard::Docker;
+use anyhow::{anyhow, Result};
+use bollard::{query_parameters::InspectNetworkOptions, Docker};
 use sam_e_types::config::{infrastructure::Infrastructure, lambda::Lambda, Config};
 use sam_e_types::invocation::ExtensionEvent;
 use std::collections::HashMap;
 use std::sync::Arc;
 use tokio::sync::{mpsc, Mutex};
-use tracing::{debug, trace};
+use tracing::{debug, info, trace, warn};
 
 // Store extension metadata: (function_name, sender, receiver)
 pub type ExtensionStore = Arc<
@@ -92,14 +93,80 @@ impl ApiState {
         &self.ip_to_function
     }
 
-    pub async fn register_ip_to_function(&self, ip: String, function_name: String) {
-        let mut map = self.ip_to_function.lock().await;
-        debug!("Registering IP {} to function {}", ip, function_name);
-        map.insert(ip, function_name);
+    pub async fn register_ip_to_function(&self, source_ip: String) -> Result<String> {
+        debug!("Attempting to register IP {} to function", source_ip);
+        let docker_client = bollard::Docker::connect_with_local_defaults()?;
+        let docker_network = docker_client
+            .inspect_network("sam-e-development", None::<InspectNetworkOptions>)
+            .await?;
+
+        let containers = if let Some(containers) = docker_network.containers {
+            containers
+        } else {
+            warn!("No containers found in Docker network 'sam-e-development'");
+            HashMap::new()
+        };
+        debug!("Found {} containers in Docker network", containers.len());
+
+        // Find the function name for this IP
+        let mut function_name: Option<String> = None;
+        for container in containers.values() {
+            if let Some(container_ip) = &container.ipv4_address {
+                let ip_only = container_ip.split('/').next().unwrap_or("");
+                trace!(
+                    "Checking container {:?} with IP {}",
+                    container.name,
+                    ip_only
+                );
+                if ip_only == source_ip {
+                    trace!("IP {} matches container {:?}", source_ip, container.name);
+                    // Match found - get container name and map to function name
+                    if let Some(container_name) = &container.name {
+                        debug!("Found container {} with IP {}", container_name, source_ip);
+
+                        // Verify this function exists in our config
+                        let lambda_exists =
+                            self.lambdas.iter().any(|l| l.get_name() == container_name);
+
+                        if lambda_exists {
+                            trace!("Container {} found in config", container_name);
+                            function_name = Some(container_name.to_string());
+
+                            // Store the IP to function mapping
+                            let mut map = self.ip_to_function.lock().await;
+                            debug!(
+                                "Registering IP {} to function {}",
+                                source_ip,
+                                container_name.to_string()
+                            );
+                            map.insert(source_ip.clone(), container_name.to_string());
+                            info!("Registered IP {} to function {}", ip_only, container_name);
+                            break;
+                        } else {
+                            warn!("Container {} not found in config", container_name,);
+                        }
+                    }
+                }
+            }
+        }
+        if let Some(name) = function_name {
+            Ok(name)
+        } else {
+            warn!("No matching function found for IP {}", source_ip);
+            Err(anyhow!("No matching function found for IP {}", source_ip))
+        }
     }
 
-    pub async fn get_function_name_from_ip(&self, ip: &str) -> Option<String> {
+    pub async fn get_function_name_from_ip(&self, source_ip: &str) -> Result<String> {
         let map = self.ip_to_function.lock().await;
-        map.get(ip).cloned()
+        let container_name = map.get(source_ip).cloned();
+        if let Some(name) = &container_name {
+            debug!("Found function name {} for IP {}", name, source_ip);
+            Ok(name.clone())
+        } else {
+            drop(map);
+            debug!("No function name found for IP {}", source_ip);
+            self.register_ip_to_function(source_ip.to_string()).await
+        }
     }
 }

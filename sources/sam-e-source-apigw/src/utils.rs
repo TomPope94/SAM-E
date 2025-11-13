@@ -1,11 +1,9 @@
 use anyhow::{anyhow, Result};
 use aws_lambda_events::apigw::{
-    ApiGatewayProxyRequest, ApiGatewayProxyRequestContext, ApiGatewayRequestAuthorizer, ApiGatewayRequestIdentity
+    ApiGatewayProxyRequest, ApiGatewayProxyRequestContext, ApiGatewayRequestAuthorizer,
+    ApiGatewayRequestIdentity,
 };
-use axum::{
-    extract::Json,
-    http::{HeaderMap, HeaderName, HeaderValue, Method},
-};
+use axum::http::{HeaderMap, HeaderName, HeaderValue, Method};
 use sam_e_types::config::lambda::{event::Event, event::EventProperties, Lambda};
 use std::collections::HashMap;
 use tracing::{debug, trace, warn};
@@ -70,7 +68,7 @@ fn remove_base_path(path: &str, base_path: &Option<&String>) -> String {
 }
 
 pub fn create_api_request(
-    body: Option<Json<serde_json::Value>>,
+    body: Option<String>,
     headers: HeaderMap,
     params: HashMap<String, String>,
     method: Method,
@@ -87,10 +85,21 @@ pub fn create_api_request(
         HeaderName::from_static("x-forwarded-proto"),
         HeaderValue::from_static("http"),
     );
+    let content_length = body
+        .as_ref()
+        .map(|b| b.len().to_string())
+        .unwrap_or_else(|| "0".to_string());
+
+    // Remove content-length header before inserting new value
+    header_map.remove("content-length");
+    header_map.insert(
+        HeaderName::from_static("content-length"),
+        HeaderValue::from_str(&content_length).unwrap_or_else(|_| HeaderValue::from_static("0")),
+    );
 
     let request_context = create_api_request_context(path, request_id, &method, &header_map);
     let api_request = ApiGatewayProxyRequest {
-        body: body.map(|b| b.0.to_string()),
+        body,
         headers: header_map,
         http_method: method,
         is_base64_encoded: false,

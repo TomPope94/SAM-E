@@ -33,15 +33,16 @@ pub async fn handle(
     headers: HeaderMap,
     State(api_state): State<ApiState>,
 ) -> Result<Response, AppError> {
-    info!("Extension registration requested for function: {}", function_name);
+    info!(
+        "Extension registration requested for function: {}",
+        function_name
+    );
 
     // Extract extension name from header
     let extension_name = headers
         .get(EXTENSION_NAME_HEADER)
         .and_then(|v| v.to_str().ok())
-        .ok_or_else(|| {
-            anyhow!("Missing required header: {}", EXTENSION_NAME_HEADER)
-        })?;
+        .ok_or_else(|| anyhow!("Missing required header: {}", EXTENSION_NAME_HEADER))?;
 
     debug!("Registering extension: {}", extension_name);
 
@@ -73,7 +74,9 @@ pub async fn handle(
         .status(200)
         .header(EXTENSION_IDENTIFIER_HEADER, extension_id)
         .header("content-type", "application/json")
-        .body(axum::body::Body::from(serde_json::to_string(&response_body)?))
+        .body(axum::body::Body::from(serde_json::to_string(
+            &response_body,
+        )?))
         .map_err(|e| anyhow!("Failed to build response: {}", e))?;
 
     Ok(response)

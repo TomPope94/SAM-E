@@ -16,12 +16,6 @@ pub async fn start(args: StartArgs) -> anyhow::Result<()> {
 
     let config = get_config()?;
 
-    let env_selection = dialoguer::Select::new()
-        .with_prompt("Which environment would you like to start?")
-        .items(&["Local", "Dev"])
-        .default(0)
-        .interact()?;
-
     let selection = dialoguer::Select::new()
         .with_prompt("Which part of the environment would you like to start?")
         .items(&[
@@ -163,19 +157,10 @@ pub async fn start(args: StartArgs) -> anyhow::Result<()> {
         .env("CONFIG", config_string);
 
     let runtime = config.get_runtime();
-    let docker_registry = runtime.get_docker_registry();
-    if env_selection == 1 {
-        if let Ok(registry) = docker_registry {
-            sh.env("REGISTRY", registry);
-        }
-    }
+    let _docker_registry = runtime.get_docker_registry();
+    // TODO: implement support for other registries
 
-    if env_selection == 1 {
-        sh.current_dir(format!("{}/dev", get_sam_e_directory_path()?));
-    } else {
-        sh.current_dir(format!("{}/local", get_sam_e_directory_path()?));
-    }
-
+    sh.current_dir(format!("{}", get_sam_e_directory_path()?));
     sh.arg(docker_cmd).status()?;
 
     Ok(())

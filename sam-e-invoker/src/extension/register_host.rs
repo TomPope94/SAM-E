@@ -4,12 +4,11 @@ use axum::{
     http::HeaderMap,
     response::Response,
 };
-use bollard::query_parameters::InspectNetworkOptions;
 use sam_e_types::invocation::ExtensionEvent;
 use serde::{Deserialize, Serialize};
-use std::{collections::HashMap, net::SocketAddr};
+use std::net::SocketAddr;
 use tokio::sync::mpsc;
-use tracing::{debug, info, warn};
+use tracing::{debug, info};
 use uuid::Uuid;
 
 use crate::{api_response::AppError, data::api::ApiState};
@@ -40,57 +39,7 @@ pub async fn handle(
         source_ip, headers
     );
 
-    // At the point an extension is registered, we check all the docker IP addresses and map their
-    // container names to the function names in the API state.
-    let docker_network = api_state
-        .docker_client
-        .inspect_network("sam-e-development", None::<InspectNetworkOptions>)
-        .await?;
-    let containers = if let Some(containers) = docker_network.containers {
-        containers
-    } else {
-        warn!("No containers found in Docker network 'sam-e-development'");
-        HashMap::new()
-    };
-
-    // Find the function name for this IP
-    let mut function_name: Option<String> = None;
-
-    for container in containers.values() {
-        if let Some(container_ip) = &container.ipv4_address {
-            let ip_only = container_ip.split('/').next().unwrap_or("");
-            if ip_only == source_ip {
-                // Match found - get container name and map to function name
-                if let Some(container_name) = &container.name {
-                    debug!("Found container {} with IP {}", container_name, source_ip);
-
-                    // Verify this function exists in our config
-                    let lambda_exists = api_state
-                        .lambdas
-                        .iter()
-                        .any(|l| l.get_name() == container_name);
-
-                    if lambda_exists {
-                        function_name = Some(container_name.to_string());
-                        // Store the IP to function mapping
-                        api_state
-                            .register_ip_to_function(
-                                ip_only.to_string(),
-                                container_name.to_string(),
-                            )
-                            .await;
-                        info!("Registered IP {} to function {}", ip_only, container_name);
-                        break;
-                    } else {
-                        warn!("Container {} not found in config", container_name,);
-                    }
-                }
-            }
-        }
-    }
-
-    let function_name = function_name
-        .ok_or_else(|| anyhow!("Could not determine function name from IP {}", source_ip))?;
+    let function_name = api_state.get_function_name_from_ip(&source_ip).await?;
 
     // Extract extension name from header
     let extension_name = headers

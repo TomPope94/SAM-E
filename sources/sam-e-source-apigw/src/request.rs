@@ -24,7 +24,7 @@ pub async fn handler(
     path: Option<Path<String>>,
     Query(params): Query<HashMap<String, String>>,
     State(api_state): State<ApiState>,
-    body: Option<Json<serde_json::Value>>,
+    body: String,
 ) -> Result<Response, AppError> {
     debug!("Request received: {:#?}", method);
     let api_lambdas = api_state.get_api_lambdas();
@@ -56,8 +56,9 @@ pub async fn handler(
 
     debug!("Creating invocation using matched lambda and request data");
     let request_id = Uuid::new_v4();
+    let body_option = if body.is_empty() { None } else { Some(body) };
     let api_data = create_api_request(
-        body,
+        body_option,
         headers,
         params,
         method,

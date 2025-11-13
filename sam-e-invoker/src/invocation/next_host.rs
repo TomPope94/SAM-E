@@ -25,33 +25,14 @@ pub async fn request_handler(
         source_ip, headers
     );
 
-    // Look up function name from IP address
     let container_name = match api_state.get_function_name_from_ip(&source_ip).await {
-        Some(function_name) => {
-            info!(
-                "Mapped IP {} to function name: {}",
-                source_ip, function_name
+        Ok(name) => name,
+        Err(_) => {
+            warn!(
+                "Function name for IP {} not found in mapping, using 'unknown'",
+                source_ip
             );
-            function_name
-        }
-        None => {
-            // Fallback: try X-Lambda-Function-Name header
-            if let Some(func_name) = headers
-                .get("x-lambda-function-name")
-                .and_then(|h| h.to_str().ok())
-            {
-                warn!(
-                    "IP {} not registered, using X-Lambda-Function-Name header: {}",
-                    source_ip, func_name
-                );
-                func_name.to_string()
-            } else {
-                warn!(
-                    "Could not determine function name from IP {} or headers - extension may not be registered yet",
-                    source_ip
-                );
-                "unknown".to_string()
-            }
+            "unknown".to_string()
         }
     };
 

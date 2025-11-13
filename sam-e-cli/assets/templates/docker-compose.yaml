@@ -1,10 +1,14 @@
 networks:
-  development:
+  sam-e-development:
+    name: sam-e-development
     attachable: true
 
 {%- for infra in infrastructure %}
 {%- if infra.infrastructure_type == "Mysql" or infra.infrastructure_type == "Postgres" or infra.infrastructure_type == "SQS" or infra.infrastructure_type == "S3" %}
+{%- if not volume_set %}
 volumes:
+{%- set_global volume_set = true %}
+{%- endif %}
 {%- endif %}
 {%- endfor %}
 {%- set postgres_volume = false %}
@@ -32,6 +36,7 @@ services:
   sam-e-invoker:
     init: true
     image: tompope94/sam-e-invoker
+    container_name: sam-e-invoker
     environment:
       - RUST_LOG=sam_e_invoker=debug,sam_e_source_apigw=debug,sam_e_source_sqs=debug,sam_e_source_s3=debug,sam_e_source_eventbridge=debug
       - CONFIG=$CONFIG
@@ -40,7 +45,7 @@ services:
       - sqs-local
     {%- endif %}
     networks:
-      - development
+      - sam-e-development
     ports:
       - 3030:3030
       - 3000:3000
@@ -49,13 +54,22 @@ services:
     mem_limit: 250m
     volumes:
       - {{runtime.credentials_location}}:/root/.aws/credentials:ro
+      - /var/run/docker.sock:/var/run/docker.sock
 
   # *********************** Custom lambdas ***************************
   # Each of the lambda functions is run as a separate docker container that will communicate with the local invoker
 {% for lambda in lambdas %}
+  {%- for event in lambda.events %}
+    {%- if event.properties.type == "api" %}
+      {%- set_global remove_base_path = true %}
+      {%- set_global base_path = event.properties.base_path %}
+    {%- endif %}
+  {%- endfor %}
+
   {{lambda.name}}:
     init: true
     image: {{lambda.image}}
+    container_name: {{lambda.name}}
     build:
       context: {{lambda.docker_build.context}}
       dockerfile: {{lambda.docker_build.dockerfile}}
@@ -64,18 +78,21 @@ services:
         - default
       {%- endif %}
     networks:
-      - development
+      - sam-e-development
     deploy:
       replicas: 1
     volumes:
       - {{runtime.credentials_location}}:/root/.aws/credentials:ro
     environment:
-      - AWS_LAMBDA_RUNTIME_API=http://sam-e-invoker:3030/{{lambda.name}}
+      - AWS_LAMBDA_RUNTIME_API=sam-e-invoker:3030
       - AWS_LAMBDA_FUNCTION_NAME={{lambda.name}}
       - AWS_LAMBDA_FUNCTION_MEMORY_SIZE=50
       - AWS_LAMBDA_FUNCTION_VERSION=1
       - AWS_LAMBDA_LOG_STREAM_NAME={{lambda.name}}
       - AWS_LAMBDA_LOG_GROUP_NAME=aws/lambda/{{lambda.name}}
+      {% if remove_base_path -%}
+      # - AWS_LWA_REMOVE_BASE_PATH=/{{base_path}}
+      {% endif -%}
       {% for key, value in lambda.environment_vars -%}
       - {{key}}={{value}}
       {% endfor -%}
@@ -92,7 +109,7 @@ services:
     volumes:
       - ./node_modules:/frontend/node_modules
     networks:
-      - development
+      - sam-e-development
     ports:
       - {{frontend.port}}:{{frontend.port}}
     deploy:
@@ -121,7 +138,7 @@ services:
     ports:
       - 3306:3306
     networks:
-      - development
+      - sam-e-development
     volumes:
       - mysql-local:/var/lib/mysql
 {%- elif infra.infrastructure_type == "Postgres" and not postgres_container -%}
@@ -135,7 +152,7 @@ services:
     ports:
       - 5432:5432
     networks:
-      - development
+      - sam-e-development
     volumes:
       - postgres-local:/var/lib/postgresql/data
 {%- elif infra.infrastructure_type == "SQS" and not sqs_container -%}
@@ -147,7 +164,7 @@ services:
       - 9324:9324
       - 9325:9325
     networks:
-      - development
+      - sam-e-development
     # NOTE: volumes don't work when using VM because this location refers to host
     # volumes:
     #   - ./local-queue/custom.conf:/opt/elasticmq.conf
@@ -168,7 +185,7 @@ services:
       - MINIO_NOTIFY_WEBHOOK_ENABLE_LOCAL=on
       - MINIO_NOTIFY_WEBHOOK_ENDPOINT_LOCAL=http://sam-e-invoker:3001/
     networks:
-      - development
+      - sam-e-development
     volumes:
       - ./local-s3/minio:/data
 {%- endif %}

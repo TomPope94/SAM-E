@@ -34,14 +34,14 @@ pub async fn response_handler(
 
     // Look up function name from IP address
     let container_name = match api_state.get_function_name_from_ip(&source_ip).await {
-        Some(function_name) => {
+        Ok(function_name) => {
             info!(
                 "Mapped IP {} to function name: {}",
                 source_ip, function_name
             );
             function_name
         }
-        None => {
+        Err(_) => {
             // Fallback: try X-Lambda-Function-Name header
             if let Some(func_name) = headers
                 .get("x-lambda-function-name")

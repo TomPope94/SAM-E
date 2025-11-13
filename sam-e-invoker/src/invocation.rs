@@ -144,6 +144,7 @@ pub async fn invoke(
 
     let res_headers = processed_invocation.get_response_headers();
     let res_body = processed_invocation.get_response();
+    trace!("Processed invocation response: {:#?}", res_body);
 
     let mut header_map = HeaderMap::new();
 
@@ -167,20 +168,29 @@ pub async fn invoke(
     });
 
     // Add headers from ApiGatewayProxyResponse.multi_value_headers
-    res_body.multi_value_headers.iter().for_each(|(key, value)| {
-        if let Ok(header_name) = HeaderName::try_from(key.as_str()) {
-            // value is already a HeaderValue, clone it
-            header_map.insert(header_name, value.clone());
-        }
-    });
+    res_body
+        .multi_value_headers
+        .iter()
+        .for_each(|(key, value)| {
+            if let Ok(header_name) = HeaderName::try_from(key.as_str()) {
+                // value is already a HeaderValue, clone it
+                header_map.insert(header_name, value.clone());
+            }
+        });
 
     let status_code = StatusCode::from_u16(res_body.status_code.try_into().unwrap_or(500))
         .unwrap_or(StatusCode::INTERNAL_SERVER_ERROR);
 
     trace!("Returning response with status code: {:?}", status_code);
-    info!("Returning response with all merged headers: {:?}", header_map);
+    info!(
+        "Returning response with all merged headers: {:?}",
+        header_map
+    );
     debug!("Headers from res_body.headers: {:?}", &res_body.headers);
-    debug!("Headers from res_body.multi_value_headers: {:?}", &res_body.multi_value_headers);
+    debug!(
+        "Headers from res_body.multi_value_headers: {:?}",
+        &res_body.multi_value_headers
+    );
 
     let response = if let Some(response_body) = &res_body.body {
         trace!("Returning response with body: {:?}", response_body);
@@ -204,12 +214,17 @@ pub async fn invoke(
                             debug!("Detected HTML response body. Returning HTML response.");
                             (status_code, header_map, Html(text.clone())).into_response()
                         } else if value_string.contains("text/event-stream") {
-                            debug!("Detected SSE response body. Returning text/event-stream response.");
+                            debug!(
+                                "Detected SSE response body. Returning text/event-stream response."
+                            );
                             // Remove content-length for SSE streaming
                             header_map.remove("content-length");
                             (status_code, header_map, text.clone()).into_response()
                         } else {
-                            debug!("Defaulting to text response with content-type: {}", value_string);
+                            debug!(
+                                "Defaulting to text response with content-type: {}",
+                                value_string
+                            );
                             (status_code, header_map, text.clone()).into_response()
                         }
                     } else {

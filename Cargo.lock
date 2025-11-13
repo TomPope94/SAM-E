@@ -2172,6 +2172,7 @@ dependencies = [
  "anyhow",
  "aws_lambda_events",
  "axum",
+ "base64 0.22.1",
  "chrono",
  "futures",
  "reqwest",

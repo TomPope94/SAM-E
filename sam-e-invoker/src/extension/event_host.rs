@@ -53,16 +53,13 @@ pub async fn handle(
 ) -> Result<Response, AppError> {
     let source_ip = addr.ip().to_string();
 
-    debug!("Extension event poll from IP: {}, headers: {:?}", source_ip, headers);
+    debug!(
+        "Extension event poll from IP: {}, headers: {:?}",
+        source_ip, headers
+    );
 
     // Get function name from IP (registered during extension registration)
-    let _function_name = api_state
-        .get_function_name_from_ip(&source_ip)
-        .await
-        .unwrap_or_else(|| {
-            warn!("Extension event poll from unregistered IP: {}", source_ip);
-            "unknown".to_string()
-        });
+    let _function_name = api_state.get_function_name_from_ip(&source_ip).await?;
 
     // Extract extension identifier from header
     let extension_id = headers
@@ -76,10 +73,9 @@ pub async fn handle(
     let extension_store = api_state.get_extension_store();
     let mut ext_store_guard = extension_store.lock().await;
 
-    let (_function_name, _sender, receiver) =
-        ext_store_guard
-            .get_mut(extension_id)
-            .ok_or_else(|| anyhow!("Extension not found: {}", extension_id))?;
+    let (_function_name, _sender, receiver) = ext_store_guard
+        .get_mut(extension_id)
+        .ok_or_else(|| anyhow!("Extension not found: {}", extension_id))?;
 
     // Long-poll: wait for an event on the channel
     // This will block until an event is sent or the channel is closed
